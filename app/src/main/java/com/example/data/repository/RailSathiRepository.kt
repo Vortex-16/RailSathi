@@ -180,6 +180,10 @@ class RailSathiRepository(
     // User Profile
     val activeUserFlow: Flow<UserEntity?> = userDao.getActiveUser()
 
+    suspend fun getActiveUser(): UserEntity? = withContext(Dispatchers.IO) {
+        userDao.getActiveUserDirect()
+    }
+
     suspend fun saveUser(user: UserEntity) = withContext(Dispatchers.IO) {
         userDao.insertUser(user)
     }

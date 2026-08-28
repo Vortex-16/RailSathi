@@ -57,11 +57,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.data.local.FoodRequestEntity
 import com.example.data.location.UserLocationInfo
 import com.example.data.model.FoodItem
@@ -75,6 +77,7 @@ import com.example.data.model.RequestStatus
 import com.example.data.model.TrainCandidate
 import com.example.data.model.TrainContextState
 import com.example.data.repository.TrainRouteDetails
+import com.example.ui.components.ContextualHintCard
 import com.example.ui.localization.LocalizationManager
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.CharcoalText
@@ -108,6 +111,12 @@ fun TravelerHomeScreen(
     regularCommute: RegularCommuteSchedule,
     searchQuery: String,
     searchedTrains: List<TrainCandidate>,
+    journeyHintShown: Boolean = true,
+    foodHintShown: Boolean = true,
+    requestHintShown: Boolean = true,
+    onDismissJourneyHint: () -> Unit = {},
+    onDismissFoodHint: () -> Unit = {},
+    onDismissRequestHint: () -> Unit = {},
     onSearchQueryChange: (String) -> Unit,
     onSelectCandidate: (TrainCandidate) -> Unit,
     onClearCandidate: () -> Unit,
@@ -153,6 +162,17 @@ fun TravelerHomeScreen(
             // CASE 1: USER IS NOT IN AN ACTIVE JOURNEY (STANDBY / OFF-TRACK / NEAR STN)
             // =========================================================================
             if (journeySession == null) {
+
+                if (!journeyHintShown) {
+                    item {
+                        ContextualHintCard(
+                            title = "Start here",
+                            description = "Select your train to begin your journey.",
+                            onDismiss = onDismissJourneyHint,
+                            testTag = "hint_start_journey"
+                        )
+                    }
+                }
 
                 // Greeting & Location Awareness Card
                 item {
@@ -521,6 +541,17 @@ fun TravelerHomeScreen(
 
                 // Active Requests Section (including Price Confirmations)
                 if (activeRequests.isNotEmpty()) {
+                    if (!requestHintShown) {
+                        item {
+                            ContextualHintCard(
+                                title = "Request from a vendor",
+                                description = "The vendor will confirm the price before you pay.",
+                                onDismiss = onDismissRequestHint,
+                                testTag = "hint_request_vendor"
+                            )
+                        }
+                    }
+
                     item {
                         Text(
                             text = "Your Orders & Price Offers",
@@ -622,11 +653,119 @@ fun TravelerHomeScreen(
                     }
                 }
 
+                if (!foodHintShown) {
+                    item {
+                        ContextualHintCard(
+                            title = "Choose what you want",
+                            description = "Select an item and adjust the quantity.",
+                            onDismiss = onDismissFoodHint,
+                            testTag = "hint_choose_food"
+                        )
+                    }
+                }
+
+                // Quick Suggested Rail Favorites Carousel
+                item {
+                    Column {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Train Favorites • Real-Time Suggestions",
+                                fontSize = if (isSeniorMode) 16.sp else 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = RailNavy
+                            )
+                            Text(
+                                text = "1-Tap Signal",
+                                fontSize = 11.sp,
+                                color = TerracottaAmber,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            RegionalSnacksCatalog.items.take(4).forEach { fav ->
+                                Card(
+                                    modifier = Modifier
+                                        .width(140.dp)
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .clickable { onSendHungerSignal(fav, seatLocationText) },
+                                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
+                                    border = BorderStroke(1.dp, WarmBorder)
+                                ) {
+                                    Column {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(80.dp)
+                                                .background(Color(0xFFFEF3C7))
+                                        ) {
+                                            if (!fav.imageUrl.isNullOrEmpty()) {
+                                                AsyncImage(
+                                                    model = fav.imageUrl,
+                                                    contentDescription = fav.nameEn,
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            } else {
+                                                Text(
+                                                    text = fav.emoji,
+                                                    fontSize = 32.sp,
+                                                    modifier = Modifier.align(Alignment.Center)
+                                                )
+                                            }
+                                        }
+
+                                        Column(modifier = Modifier.padding(8.dp)) {
+                                            Text(
+                                                text = fav.nameEn,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = CharcoalText,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(
+                                                    text = "₹${fav.typicalPriceInr}",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = TerracottaAmber
+                                                )
+                                                Text(
+                                                    text = "Signal ➔",
+                                                    fontSize = 10.sp,
+                                                    color = RailNavy,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Dietary & Price Filter Chips
                 item {
                     Column {
                         Text(
-                            text = "Signal Snacks to Onboard Vendors",
+                            text = "Full Snack Menu",
                             fontSize = if (isSeniorMode) 16.sp else 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = CharcoalText
@@ -715,31 +854,56 @@ fun CandidateTrainCard(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "${candidate.trainName} (${candidate.trainNumber})",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = if (isSeniorMode) 16.sp else 14.sp,
+                        color = CharcoalText
+                    )
+                }
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = "${candidate.trainName} (${candidate.trainNumber})",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                    color = CharcoalText
-                )
-                Text(
-                    text = "${candidate.originStationName} ➔ ${candidate.destStationName} • ${candidate.platform}",
+                    text = "${candidate.originStationName} ➔ ${candidate.destStationName}",
                     fontSize = 12.sp,
                     color = CharcoalTextMuted
                 )
+                Spacer(modifier = Modifier.height(4.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFE2E8F0))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(candidate.platform, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = RailNavy)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFDCFCE7))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text("Upcoming", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NatureGreen)
+                    }
+                }
             }
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = candidate.departureTime,
                     fontWeight = FontWeight.Bold,
-                    fontSize = if (isSeniorMode) 16.sp else 14.sp,
+                    fontSize = if (isSeniorMode) 17.sp else 15.sp,
                     color = RailNavy
                 )
                 Text(
-                    text = "Tap to Board",
+                    text = "Tap to Board ➔",
                     fontSize = 11.sp,
                     color = TerracottaAmber,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -768,7 +932,7 @@ fun SnackFoodItemCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("snack_card_${item.id}"),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = WarmSurface),
         border = BorderStroke(1.dp, WarmBorder)
     ) {
@@ -781,31 +945,54 @@ fun SnackFoodItemCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Snack Emoji
+                // Real Food Image with fallback emoji
                 Box(
                     modifier = Modifier
-                        .size(if (isSeniorMode) 50.dp else 44.dp)
+                        .size(if (isSeniorMode) 64.dp else 56.dp)
                         .clip(RoundedCornerShape(10.dp))
                         .background(Color(0xFFFEF3C7)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = item.emoji,
-                        fontSize = if (isSeniorMode) 26.sp else 22.sp
-                    )
+                    if (!item.imageUrl.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = item.imageUrl,
+                            contentDescription = item.nameEn,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = item.emoji,
+                            fontSize = if (isSeniorMode) 28.sp else 24.sp
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = localizedName,
-                        fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = CharcoalText,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = localizedName,
+                            fontSize = if (isSeniorMode) 17.sp else 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = CharcoalText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+
+                        Text(
+                            text = "Typical ~₹${item.typicalPriceInr}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TerracottaAmber
+                        )
+                    }
 
                     Text(
                         text = item.description,
@@ -815,14 +1002,29 @@ fun SnackFoodItemCard(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.height(4.dp))
 
-                    Text(
-                        text = "Price: Confirmed by Vendor on acceptance",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFF64748B)
-                    )
+                    // Dietary Tags
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        item.dietaryTags.take(2).forEach { tag ->
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(Color(0xFFF1F5F9))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = tag,
+                                    fontSize = 10.sp,
+                                    color = Color(0xFF475569),
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
                 }
             }
 

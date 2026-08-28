@@ -1,7 +1,13 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,7 +17,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,82 +25,76 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsTransit
-import androidx.compose.material.icons.filled.Elderly
+import androidx.compose.material.icons.filled.Fastfood
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Storefront
-import androidx.compose.material.icons.filled.Train
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.IndianLanguage
 import com.example.data.model.UserRole
-import com.example.ui.localization.LocalizationManager
 import com.example.ui.theme.CharcoalText
 import com.example.ui.theme.CharcoalTextMuted
-import com.example.ui.theme.GoldYellow
-import com.example.ui.theme.NatureGreen
 import com.example.ui.theme.RailNavy
 import com.example.ui.theme.TerracottaAmber
 import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmSandBackground
 import com.example.ui.theme.WarmSurface
-import kotlinx.coroutines.launch
 
 @Composable
 fun OnboardingAuthScreen(
-    currentLanguage: IndianLanguage,
-    onLanguageSelect: (IndianLanguage) -> Unit,
-    onComplete: (name: String, phone: String, role: UserRole, lang: IndianLanguage, isSenior: Boolean, train: String, coach: String) -> Unit
+    currentLanguage: IndianLanguage = IndianLanguage.ENGLISH,
+    onLanguageSelect: ((IndianLanguage) -> Unit)? = null,
+    onComplete: (name: String, phone: String, role: UserRole, lang: IndianLanguage, isSenior: Boolean, train: String, coach: String) -> Unit = { _, _, _, _, _, _, _ -> },
+    onSimpleComplete: (() -> Unit)? = null,
+    onDismissReplay: (() -> Unit)? = null
 ) {
-    var selectedRole by remember { mutableStateOf(UserRole.TRAVELER) }
-    var selectedLang by remember { mutableStateOf(currentLanguage) }
-    var seniorMode by remember { mutableStateOf(false) }
-    var nameInput by remember { mutableStateOf("") }
-    var phoneInput by remember { mutableStateOf("") }
-    var selectedTrain by remember { mutableStateOf("31821 Sealdah - Ranaghat Local") }
-    var selectedCoach by remember { mutableStateOf("C-4") }
+    var currentStep by remember { mutableIntStateOf(1) }
+    val isReplayMode = onDismissReplay != null
 
-    val scrollState = rememberScrollState()
-    val coroutineScope = rememberCoroutineScope()
-    val focusManager = LocalFocusManager.current
+    fun handleFinish() {
+        if (isReplayMode) {
+            onDismissReplay?.invoke()
+        } else if (onSimpleComplete != null) {
+            onSimpleComplete.invoke()
+        } else {
+            onComplete(
+                "Daily Commuter",
+                "9876543210",
+                UserRole.TRAVELER,
+                currentLanguage,
+                false,
+                "31821 Sealdah - Ranaghat Local",
+                "C-4"
+            )
+        }
+    }
 
     Surface(
         modifier = Modifier
@@ -107,529 +106,397 @@ fun OnboardingAuthScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .imePadding()
-                .verticalScroll(scrollState)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
+            // Top Bar: Back / Close & Skip Button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(48.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (currentStep == 2) {
+                    IconButton(
+                        onClick = { currentStep = 1 },
+                        modifier = Modifier.testTag("onboarding_back_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back to Step 1",
+                            tint = RailNavy
+                        )
+                    }
+                } else if (isReplayMode) {
+                    IconButton(
+                        onClick = { onDismissReplay?.invoke() },
+                        modifier = Modifier.testTag("onboarding_close_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close Tutorial",
+                            tint = CharcoalTextMuted
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
+
+                if (!isReplayMode) {
+                    TextButton(
+                        onClick = { handleFinish() },
+                        modifier = Modifier.testTag("onboarding_skip_button")
+                    ) {
+                        Text(
+                            text = "Skip",
+                            color = CharcoalTextMuted,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                } else {
+                    Spacer(modifier = Modifier.width(48.dp))
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
-            // App Emblem
+            // Main Content Carousel (Screen 1 vs Screen 2)
             Box(
                 modifier = Modifier
-                    .size(68.dp)
-                    .clip(CircleShape)
-                    .background(RailNavy),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.DirectionsTransit,
-                    contentDescription = "RailSathi Emblem",
-                    tint = TerracottaAmber,
-                    modifier = Modifier.size(38.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = LocalizationManager.getString("app_title", selectedLang),
-                fontSize = if (seniorMode) 28.sp else 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = RailNavy,
-                textAlign = TextAlign.Center
-            )
-
-            Text(
-                text = LocalizationManager.getString("app_tagline", selectedLang),
-                fontSize = if (seniorMode) 15.sp else 13.sp,
-                color = CharcoalTextMuted,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Language Selector Chips
-            Text(
-                text = LocalizationManager.getString("language_select", selectedLang),
-                fontSize = if (seniorMode) 16.sp else 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = CharcoalText,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Indian Languages row
-            Row(
-                modifier = Modifier
+                    .weight(1f)
                     .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                listOf(
-                    IndianLanguage.HINDI,
-                    IndianLanguage.BENGALI,
-                    IndianLanguage.MARATHI,
-                    IndianLanguage.TAMIL,
-                    IndianLanguage.ENGLISH
-                ).forEach { lang ->
-                    val isSelected = selectedLang == lang
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) RailNavy else WarmSurface)
-                            .border(1.dp, if (isSelected) RailNavy else WarmBorder, RoundedCornerShape(20.dp))
-                            .clickable {
-                                selectedLang = lang
-                                onLanguageSelect(lang)
-                            }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
-                            .testTag("lang_chip_${lang.code}")
-                    ) {
-                        Text(
-                            text = lang.nativeName,
-                            color = if (isSelected) Color.White else CharcoalText,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-
-            // Row 2 of Indian languages
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 4.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                listOf(
-                    IndianLanguage.TELUGU,
-                    IndianLanguage.GUJARATI,
-                    IndianLanguage.KANNADA,
-                    IndianLanguage.ODIA,
-                    IndianLanguage.PUNJABI,
-                    IndianLanguage.MALAYALAM
-                ).forEach { lang ->
-                    val isSelected = selectedLang == lang
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(if (isSelected) RailNavy else WarmSurface)
-                            .border(1.dp, if (isSelected) RailNavy else WarmBorder, RoundedCornerShape(20.dp))
-                            .clickable {
-                                selectedLang = lang
-                                onLanguageSelect(lang)
-                            }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text(
-                            text = lang.nativeName,
-                            color = if (isSelected) Color.White else CharcoalText,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Senior Citizen Switch Card
-            Card(
-                colors = CardDefaults.cardColors(containerColor = if (seniorMode) Color(0xFFFEF3C7) else WarmSurface),
-                shape = RoundedCornerShape(12.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (seniorMode) GoldYellow else WarmBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Elderly,
-                            contentDescription = "Senior Mode",
-                            tint = if (seniorMode) GoldYellow else CharcoalTextMuted,
-                            modifier = Modifier.size(28.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = LocalizationManager.getString("senior_mode", selectedLang),
-                                fontSize = if (seniorMode) 16.sp else 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = CharcoalText
+                AnimatedContent(
+                    targetState = currentStep,
+                    transitionSpec = {
+                        if (targetState > initialState) {
+                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                                slideOutHorizontally { width -> -width } + fadeOut()
                             )
-                            Text(
-                                text = LocalizationManager.getString("senior_mode_subtitle", selectedLang),
-                                fontSize = 12.sp,
-                                color = CharcoalTextMuted
+                        } else {
+                            (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                                slideOutHorizontally { width -> width } + fadeOut()
                             )
                         }
-                    }
-
-                    Switch(
-                        checked = seniorMode,
-                        onCheckedChange = { seniorMode = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = Color.White,
-                            checkedTrackColor = GoldYellow
-                        ),
-                        modifier = Modifier.testTag("senior_mode_switch")
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Role Selection Header
-            Text(
-                text = LocalizationManager.getString("role_select_title", selectedLang),
-                fontSize = if (seniorMode) 18.sp else 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = CharcoalText,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Option 1: Train Passenger
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { selectedRole = UserRole.TRAVELER }
-                    .testTag("role_traveler_card"),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (selectedRole == UserRole.TRAVELER) Color(0xFFEFF6FF) else WarmSurface
-                ),
-                border = androidx.compose.foundation.BorderStroke(
-                    if (selectedRole == UserRole.TRAVELER) 2.dp else 1.dp,
-                    if (selectedRole == UserRole.TRAVELER) RailNavy else Color(0xFFCBD5E1)
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(if (selectedRole == UserRole.TRAVELER) RailNavy else Color(0xFFE2E8F0)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Passenger",
-                            tint = if (selectedRole == UserRole.TRAVELER) Color.White else CharcoalText
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = LocalizationManager.getString("role_passenger", selectedLang),
-                            fontSize = if (seniorMode) 17.sp else 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = LocalizationManager.getString("role_passenger_desc", selectedLang),
-                            fontSize = 12.sp,
-                            color = CharcoalTextMuted
-                        )
-                    }
-
-                    if (selectedRole == UserRole.TRAVELER) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Selected",
-                            tint = RailNavy,
-                            modifier = Modifier.size(24.dp)
-                        )
+                    },
+                    label = "onboarding_screen_animation"
+                ) { step ->
+                    if (step == 1) {
+                        OnboardingScreenOneContent()
+                    } else {
+                        OnboardingScreenTwoContent()
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Option 2: Train Vendor / Hawker
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { selectedRole = UserRole.VENDOR }
-                    .testTag("role_vendor_card"),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (selectedRole == UserRole.VENDOR) Color(0xFFFFF7ED) else WarmSurface
-                ),
-                border = androidx.compose.foundation.BorderStroke(
-                    if (selectedRole == UserRole.VENDOR) 2.dp else 1.dp,
-                    if (selectedRole == UserRole.VENDOR) TerracottaAmber else Color(0xFFCBD5E1)
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .background(if (selectedRole == UserRole.VENDOR) TerracottaAmber else Color(0xFFE2E8F0)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Storefront,
-                            contentDescription = "Vendor",
-                            tint = if (selectedRole == UserRole.VENDOR) Color.White else CharcoalText
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = LocalizationManager.getString("role_vendor", selectedLang),
-                            fontSize = if (seniorMode) 17.sp else 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = LocalizationManager.getString("role_vendor_desc", selectedLang),
-                            fontSize = 12.sp,
-                            color = CharcoalTextMuted
-                        )
-                    }
-
-                    if (selectedRole == UserRole.VENDOR) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = "Selected",
-                            tint = TerracottaAmber,
-                            modifier = Modifier.size(24.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            // Profile Fields Container (Darker borders, high-contrast text and keyboard auto-scroll)
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                border = androidx.compose.foundation.BorderStroke(1.5.dp, Color(0xFF94A3B8))
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                ) {
-                    Text(
-                        text = if (selectedRole == UserRole.VENDOR) "Vendor Details • विक्रेता विवरण" else "Passenger Details • यात्री विवरण",
-                        fontSize = if (seniorMode) 16.sp else 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = CharcoalText
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    val activeAccent = if (selectedRole == UserRole.VENDOR) TerracottaAmber else RailNavy
-
-                    // Name Input
-                    OutlinedTextField(
-                        value = nameInput,
-                        onValueChange = { nameInput = it },
-                        label = {
-                            Text(
-                                if (selectedRole == UserRole.VENDOR) "Vendor Name (फेरीवाले का नाम)" else "Passenger Name (यात्री का नाम)",
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        },
-                        placeholder = {
-                            Text(
-                                if (selectedRole == UserRole.VENDOR) "e.g. Subhash Da" else "e.g. Aniket Sharma",
-                                color = Color(0xFF64748B)
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = if (selectedRole == UserRole.VENDOR) Icons.Default.Storefront else Icons.Default.Person,
-                                contentDescription = "Name Icon",
-                                tint = activeAccent
-                            )
-                        },
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            color = CharcoalText,
-                            fontSize = if (seniorMode) 17.sp else 15.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        keyboardOptions = KeyboardOptions(
-                            capitalization = KeyboardCapitalization.Words,
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Next
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = CharcoalText,
-                            unfocusedTextColor = CharcoalText,
-                            focusedContainerColor = Color(0xFFF8FAFC),
-                            unfocusedContainerColor = Color(0xFFF1F5F9),
-                            cursorColor = activeAccent,
-                            focusedBorderColor = activeAccent,
-                            unfocusedBorderColor = Color(0xFF64748B),
-                            focusedLabelColor = activeAccent,
-                            unfocusedLabelColor = Color(0xFF334155)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onFocusChanged { focusState ->
-                                if (focusState.isFocused) {
-                                    coroutineScope.launch {
-                                        scrollState.animateScrollTo(scrollState.maxValue)
-                                    }
-                                }
-                            }
-                            .testTag("input_name")
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Phone Input
-                    OutlinedTextField(
-                        value = phoneInput,
-                        onValueChange = { phoneInput = it },
-                        label = {
-                            Text(
-                                "Mobile Number (मोबाईल नंबर)",
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        },
-                        placeholder = {
-                            Text(
-                                "e.g. 9876543210",
-                                color = Color(0xFF64748B)
-                            )
-                        },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Default.Phone,
-                                contentDescription = "Phone Icon",
-                                tint = activeAccent
-                            )
-                        },
-                        singleLine = true,
-                        textStyle = TextStyle(
-                            color = CharcoalText,
-                            fontSize = if (seniorMode) 17.sp else 15.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Phone,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = {
-                                focusManager.clearFocus()
-                            }
-                        ),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedTextColor = CharcoalText,
-                            unfocusedTextColor = CharcoalText,
-                            focusedContainerColor = Color(0xFFF8FAFC),
-                            unfocusedContainerColor = Color(0xFFF1F5F9),
-                            cursorColor = activeAccent,
-                            focusedBorderColor = activeAccent,
-                            unfocusedBorderColor = Color(0xFF64748B),
-                            focusedLabelColor = activeAccent,
-                            unfocusedLabelColor = Color(0xFF334155)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onFocusChanged { focusState ->
-                                if (focusState.isFocused) {
-                                    coroutineScope.launch {
-                                        scrollState.animateScrollTo(scrollState.maxValue)
-                                    }
-                                }
-                            }
-                            .testTag("input_phone")
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Submit Button
-            Button(
-                onClick = {
-                    onComplete(
-                        nameInput,
-                        phoneInput,
-                        selectedRole,
-                        selectedLang,
-                        seniorMode,
-                        selectedTrain,
-                        selectedCoach
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(if (seniorMode) 56.dp else 50.dp)
-                    .testTag("get_started_btn"),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (selectedRole == UserRole.VENDOR) TerracottaAmber else RailNavy
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                Text(
-                    text = "Get Started • आगे बढ़ें",
-                    fontSize = if (seniorMode) 18.sp else 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Guest access button
-            TextButton(
-                onClick = {
-                    onComplete(
-                        "Guest Passenger",
-                        "9999999999",
-                        UserRole.GUEST,
-                        selectedLang,
-                        seniorMode,
-                        selectedTrain,
-                        selectedCoach
-                    )
-                },
-                modifier = Modifier.testTag("guest_btn")
-            ) {
-                Text(
-                    text = LocalizationManager.getString("role_guest", selectedLang),
-                    color = CharcoalTextMuted,
-                    fontSize = if (seniorMode) 15.sp else 13.sp
-                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Bottom Actions & Page Indicator
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (currentStep == 1) {
+                    Button(
+                        onClick = { currentStep = 2 },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .testTag("onboarding_get_started_button"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RailNavy)
+                    ) {
+                        Text(
+                            text = "Get Started",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                } else {
+                    Button(
+                        onClick = { handleFinish() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .testTag("onboarding_start_using_button"),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = RailNavy)
+                    ) {
+                        Text(
+                            text = if (isReplayMode) "Got it" else "Start Using RailSaathi",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Minimal Page Indicator: 1 / 2 or 2 / 2
+                Text(
+                    text = "$currentStep / 2",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = CharcoalTextMuted,
+                    modifier = Modifier.testTag("onboarding_page_indicator")
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+            }
         }
     }
 }
 
+@Composable
+private fun OnboardingScreenOneContent() {
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        // Subtle, clean visual: Train + Passenger + Food
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(CircleShape)
+                    .background(WarmSurface)
+                    .background(RailNavy.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.DirectionsTransit,
+                    contentDescription = "Train",
+                    tint = RailNavy,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(CircleShape)
+                    .background(WarmSurface)
+                    .background(TerracottaAmber.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Passenger",
+                    tint = TerracottaAmber,
+                    modifier = Modifier.size(28.dp)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(54.dp)
+                    .clip(CircleShape)
+                    .background(WarmSurface)
+                    .background(Color(0xFF16A34A).copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Fastfood,
+                    contentDescription = "Food",
+                    tint = Color(0xFF16A34A),
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(28.dp))
+
+        // Title
+        Text(
+            text = "RailSaathi",
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Bold,
+            color = RailNavy,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Subtitle
+        Text(
+            text = "Your journey, made easier.",
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Medium,
+            color = CharcoalTextMuted,
+            textAlign = TextAlign.Center
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // 3 Key Bullets in a clean card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = WarmSurface),
+            border = BorderStroke(1.dp, WarmBorder)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                FeatureBulletRow(
+                    icon = Icons.Default.DirectionsTransit,
+                    iconTint = RailNavy,
+                    text = "Find your train."
+                )
+
+                FeatureBulletRow(
+                    icon = Icons.Default.Fastfood,
+                    iconTint = TerracottaAmber,
+                    text = "Discover local food."
+                )
+
+                FeatureBulletRow(
+                    icon = Icons.Default.Storefront,
+                    iconTint = Color(0xFF16A34A),
+                    text = "Connect with nearby vendors."
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun FeatureBulletRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
+    text: String
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(iconTint.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+
+        Text(
+            text = text,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = CharcoalText
+        )
+    }
+}
+
+@Composable
+private fun OnboardingScreenTwoContent() {
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState),
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = "How RailSaathi works",
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = RailNavy,
+            modifier = Modifier.padding(bottom = 20.dp)
+        )
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = WarmSurface),
+            border = BorderStroke(1.dp, WarmBorder)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(20.dp)
+            ) {
+                // Step 01
+                StepItemRow(
+                    number = "01",
+                    title = "Start your journey",
+                    description = "Select the train you're travelling on."
+                )
+
+                // Step 02
+                StepItemRow(
+                    number = "02",
+                    title = "Find what you need",
+                    description = "Browse food and nearby vendors."
+                )
+
+                // Step 03
+                StepItemRow(
+                    number = "03",
+                    title = "Request & confirm",
+                    description = "Choose quantity. The vendor confirms the price."
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StepItemRow(
+    number: String,
+    title: String,
+    description: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text(
+            text = number,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = TerracottaAmber,
+            modifier = Modifier.padding(top = 1.dp)
+        )
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = CharcoalText
+            )
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(
+                text = description,
+                fontSize = 13.sp,
+                color = CharcoalTextMuted,
+                lineHeight = 18.sp
+            )
+        }
+    }
+}

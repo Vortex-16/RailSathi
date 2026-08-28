@@ -69,6 +69,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isOnboardingDone: StateFlow<Boolean> = prefs.onboardingCompletedFlow
     val locationState: StateFlow<UserLocationInfo> = locationTracker.locationState
 
+    // Contextual Hints State Flows
+    val journeyHintShown: StateFlow<Boolean> = prefs.journeyHintShownFlow
+    val foodHintShown: StateFlow<Boolean> = prefs.foodHintShownFlow
+    val requestHintShown: StateFlow<Boolean> = prefs.requestHintShownFlow
+    val vendorHintShown: StateFlow<Boolean> = prefs.vendorHintShownFlow
+
+    private val _isReplayingTutorial = MutableStateFlow(false)
+    val isReplayingTutorial: StateFlow<Boolean> = _isReplayingTutorial.asStateFlow()
+
     // Train Context Engine States
     val contextState: StateFlow<TrainContextState> = trainContextEngine.contextState
     val activeJourneySession: StateFlow<JourneySession?> = trainContextEngine.activeJourneyFlow
@@ -78,6 +87,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val selectedCandidate: StateFlow<TrainCandidate?> = trainContextEngine.selectedCandidate
     val confidenceScore: StateFlow<Int> = trainContextEngine.confidenceScore
     val confidenceDescription: StateFlow<String> = trainContextEngine.confidenceDescription
+    val stationConfidence = trainContextEngine.stationConfidence
+    val filteredDepartedTrains = trainContextEngine.filteredDepartedTrains
+    val currentIstTime = trainContextEngine.currentIstTime
+
+    fun getDiagnosticsSnapshot() = trainContextEngine.getDiagnosticsSnapshot()
 
     // Regular Commute Info
     val regularCommute = MutableStateFlow(RegularCommuteSchedule())
@@ -368,6 +382,54 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             delay(3000)
             _alertBanner.value = null
         }
+    }
+
+    fun completeSimpleOnboarding(role: UserRole = UserRole.TRAVELER) {
+        viewModelScope.launch {
+            val savedRole = prefs.getSavedRole() ?: role
+            prefs.saveRole(savedRole)
+            prefs.setOnboardingCompleted(true)
+            _currentRole.value = savedRole
+
+            val existingUser = repository.getActiveUser()
+            if (existingUser == null) {
+                val user = UserEntity(
+                    userId = "user_${System.currentTimeMillis()}",
+                    name = if (savedRole == UserRole.VENDOR) "Subhash (Vendor)" else "Daily Commuter",
+                    phone = "9876543210",
+                    role = savedRole.name,
+                    languageCode = prefs.getSavedLanguage().code,
+                    isSeniorMode = prefs.getSavedSeniorMode(),
+                    defaultTrain = "31821 Sealdah - Ranaghat Local",
+                    defaultCoach = "C-4"
+                )
+                repository.saveUser(user)
+            }
+        }
+    }
+
+    fun replayTutorial() {
+        _isReplayingTutorial.value = true
+    }
+
+    fun finishTutorialReplay() {
+        _isReplayingTutorial.value = false
+    }
+
+    fun dismissJourneyHint() {
+        prefs.setJourneyHintShown(true)
+    }
+
+    fun dismissFoodHint() {
+        prefs.setFoodHintShown(true)
+    }
+
+    fun dismissRequestHint() {
+        prefs.setRequestHintShown(true)
+    }
+
+    fun dismissVendorHint() {
+        prefs.setVendorHintShown(true)
     }
 
     fun completeOnboarding(

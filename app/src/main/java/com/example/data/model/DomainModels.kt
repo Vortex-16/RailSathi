@@ -39,7 +39,9 @@ data class FoodItem(
     val isSeniorFriendly: Boolean = false,
     val dietaryTags: List<String> = listOf("Fresh", "Local"),
     val emoji: String = "🍲",
-    val description: String = ""
+    val description: String = "",
+    val imageUrl: String? = null,
+    val typicalPriceInr: Int = 20
 )
 
 data class FoodRequest(
@@ -63,7 +65,7 @@ data class FoodRequest(
 
 object RegionalSnacksCatalog {
     val items = listOf(
-        // West Bengal
+        // West Bengal & Eastern
         FoodItem(
             id = "jhalmuri_kol",
             nameEn = "Kolkata Jhalmuri",
@@ -79,7 +81,28 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = true,
             dietaryTags = listOf("Spicy", "Puffed Rice", "Mustard Oil"),
             emoji = "🥣",
-            description = "Fresh spicy puffed rice with mustard oil, boiled potato, coconut and crunchy mixture"
+            description = "Fresh spicy puffed rice with mustard oil, boiled potato, coconut and crunchy mixture",
+            imageUrl = "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 20
+        ),
+        FoodItem(
+            id = "samosa_singara",
+            nameEn = "Hot Crispy Samosa / Singara",
+            nameHi = "गरमा-गरम आलू समोसा (2 पीस)",
+            nameBn = "ফুলকপির গরম শিঙাড়া (২টি)",
+            nameMr = "गरमागरम समोसा",
+            nameTa = "சூடான சமோசா",
+            state = "West Bengal",
+            region = "Eastern",
+            category = "Warm Food",
+            isVeg = true,
+            isJain = false,
+            isSeniorFriendly = false,
+            dietaryTags = listOf("Crispy", "Potato & Peanut"),
+            emoji = "🥟",
+            description = "Golden crisp crust stuffed with spiced potato, roasted peanuts and whole spices",
+            imageUrl = "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 15
         ),
         FoodItem(
             id = "ghugni_kol",
@@ -96,7 +119,9 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = true,
             dietaryTags = listOf("Warm", "High Protein"),
             emoji = "🍲",
-            description = "Warm spiced yellow pea curry garnished with fresh ginger, coriander and toasted cumin"
+            description = "Warm spiced yellow pea curry garnished with fresh ginger, coriander and toasted cumin",
+            imageUrl = "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 20
         ),
         FoodItem(
             id = "badam_roasted",
@@ -113,7 +138,9 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = false,
             dietaryTags = listOf("Crunchy", "High Protein"),
             emoji = "🥜",
-            description = "Hot sand-roasted crunchy peanuts with rock salt"
+            description = "Hot sand-roasted crunchy peanuts with rock salt",
+            imageUrl = "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 15
         ),
         FoodItem(
             id = "chana_jor",
@@ -130,7 +157,9 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = false,
             dietaryTags = listOf("Tangy", "Black Gram"),
             emoji = "🌶️",
-            description = "Flattened pressed black gram tossed with tangy lemon, green chilli and spice mix"
+            description = "Flattened pressed black gram tossed with tangy lemon, green chilli and spice mix",
+            imageUrl = "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 20
         ),
         FoodItem(
             id = "masala_chai",
@@ -147,10 +176,12 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = true,
             dietaryTags = listOf("Hot", "Cardamom & Ginger"),
             emoji = "☕",
-            description = "Cardamom and ginger infused hot fresh milk tea"
+            description = "Cardamom and ginger infused hot fresh milk tea served piping hot",
+            imageUrl = "https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 10
         ),
 
-        // Maharashtra
+        // Maharashtra & Western
         FoodItem(
             id = "vada_pav_mum",
             nameEn = "Mumbai Local Vada Pav",
@@ -166,7 +197,9 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = true,
             dietaryTags = listOf("Iconic", "Freshly Fried"),
             emoji = "🥪",
-            description = "Crispy spiced potato dumpling in fresh pav with dry garlic chutney"
+            description = "Crispy spiced potato dumpling in fresh pav with dry garlic chutney",
+            imageUrl = "https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 20
         ),
         FoodItem(
             id = "soft_poha",
@@ -183,10 +216,12 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = true,
             dietaryTags = listOf("Light", "Easy to Digest"),
             emoji = "🍚",
-            description = "Light, non-spicy fluffy flattened rice with curry leaves and peanuts"
+            description = "Light, non-spicy fluffy flattened rice with curry leaves and peanuts",
+            imageUrl = "https://images.unsplash.com/photo-1645177628172-a94c1f96e6db?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 25
         ),
 
-        // Tamil Nadu / South India
+        // South India
         FoodItem(
             id = "idli_vada_combo",
             nameEn = "Steamed Idli & Medu Vada",
@@ -202,7 +237,9 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = true,
             dietaryTags = listOf("Steamed", "Probiotic"),
             emoji = "🥟",
-            description = "Steamed rice cakes and crispy lentil doughnut with coconut chutney"
+            description = "Steamed rice cakes and crispy lentil doughnut with coconut chutney",
+            imageUrl = "https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 30
         ),
         FoodItem(
             id = "murukku_snack",
@@ -219,10 +256,10 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = false,
             dietaryTags = listOf("Crunchy", "Rice & Sesame"),
             emoji = "🥨",
-            description = "Traditional crunchy golden spiral snack made with rice flour and cumin"
+            description = "Traditional crunchy golden spiral snack made with rice flour and cumin",
+            imageUrl = "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 20
         ),
-
-        // Kerala
         FoodItem(
             id = "banana_chips_ker",
             nameEn = "Nendran Banana Chips (Coconut Oil)",
@@ -238,7 +275,9 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = true,
             dietaryTags = listOf("Pure Coconut Oil", "Crispy"),
             emoji = "🍌",
-            description = "Thinly sliced raw plantain fried in fresh coconut oil with turmeric and sea salt"
+            description = "Thinly sliced raw plantain fried in fresh coconut oil with turmeric and sea salt",
+            imageUrl = "https://images.unsplash.com/photo-1528735602780-2552fd46c7af?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 30
         ),
 
         // Gujarat
@@ -257,27 +296,12 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = true,
             dietaryTags = listOf("Steamed", "Low Calorie"),
             emoji = "🟨",
-            description = "Fluffy steamed gram flour savory cake tempered with mustard seeds and curry leaves"
-        ),
-        FoodItem(
-            id = "fafda_jalebi",
-            nameEn = "Crispy Fafda & Papaya Sambharo",
-            nameHi = "कुरकुरा फाफड़ा व पपीता चटनी",
-            nameBn = "মুচমুচে ফাফড়া ও পেঁপে চাটনি",
-            nameMr = "कुरकुरीत फाफडा",
-            nameTa = "பாப்டா",
-            state = "Gujarat",
-            region = "Western",
-            category = "Snacks",
-            isVeg = true,
-            isJain = false,
-            isSeniorFriendly = false,
-            dietaryTags = listOf("Crunchy", "Gram Flour"),
-            emoji = "🥖",
-            description = "Crispy gram flour strips seasoned with carom seeds and served with raw papaya salad"
+            description = "Fluffy steamed gram flour savory cake tempered with mustard seeds and curry leaves",
+            imageUrl = "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 25
         ),
 
-        // Water & Packaged
+        // Packaged & Water
         FoodItem(
             id = "water_bottle",
             nameEn = "Packaged Chilled Drinking Water",
@@ -293,7 +317,9 @@ object RegionalSnacksCatalog {
             isSeniorFriendly = true,
             dietaryTags = listOf("ISI Certified", "Sealed"),
             emoji = "💧",
-            description = "ISI certified sealed chilled mineral water bottle"
+            description = "ISI certified sealed chilled mineral water bottle (Rail Neer / Kinley)",
+            imageUrl = "https://images.unsplash.com/photo-1548839140-29a749e1bc4e?auto=format&fit=crop&w=600&q=80",
+            typicalPriceInr = 15
         )
     )
 }

@@ -93,6 +93,19 @@ data class ConfirmOrderPayload(
 )
 
 @JsonClass(generateAdapter = true)
+data class RemoteLiveTrainDto(
+    @Json(name = "trainNumber") val trainNumber: String,
+    @Json(name = "trainName") val trainName: String,
+    @Json(name = "scheduledDeparture") val scheduledDeparture: String = "",
+    @Json(name = "actualDeparture") val actualDeparture: String = "",
+    @Json(name = "estimatedDeparture") val estimatedDeparture: String = "",
+    @Json(name = "status") val status: String = "ON_TIME",
+    @Json(name = "delayMinutes") val delayMinutes: Int = 0,
+    @Json(name = "platform") val platform: String = "PF 1",
+    @Json(name = "destination") val destination: String = ""
+)
+
+@JsonClass(generateAdapter = true)
 data class SyncPayloadItem(
     @Json(name = "idempotencyKey") val idempotencyKey: String,
     @Json(name = "operationType") val operationType: String,

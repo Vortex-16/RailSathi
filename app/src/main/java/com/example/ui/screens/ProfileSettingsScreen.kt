@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.DirectionsTransit
 import androidx.compose.material.icons.filled.Elderly
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.GpsNotFixed
+import androidx.compose.material.icons.filled.HelpOutline
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shield
@@ -85,7 +86,9 @@ fun ProfileSettingsScreen(
     onLanguageChange: (IndianLanguage) -> Unit,
     onToggleSeniorMode: (Boolean) -> Unit,
     onRouteChange: (TrainRouteDetails) -> Unit,
-    onSimulateStation: (String) -> Unit = {}
+    onReplayTutorial: () -> Unit = {},
+    onSimulateStation: (String) -> Unit = {},
+    onOpenDiagnostics: () -> Unit = {}
 ) {
     var showRouteMenu by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
@@ -630,6 +633,116 @@ fun ProfileSettingsScreen(
                                 }
                             }
                         }
+                    }
+                }
+            }
+
+            // Location & Train Diagnostics Card
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { onOpenDiagnostics() }
+                        .testTag("profile_diagnostics_card"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
+                    border = BorderStroke(1.dp, WarmBorder)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.GpsFixed,
+                                contentDescription = "Diagnostics",
+                                tint = RailNavy,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Location & Station Diagnostics",
+                                    fontSize = if (isSeniorMode) 17.sp else 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CharcoalText
+                                )
+                                Text(
+                                    text = "Live GPS accuracy, station geofence, filtered departed trains",
+                                    fontSize = 12.sp,
+                                    color = CharcoalTextMuted
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Inspect ➔",
+                            color = RailNavy,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // Help & Tutorial Replay
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { onReplayTutorial() }
+                        .testTag("profile_how_it_works_card"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
+                    border = BorderStroke(1.dp, WarmBorder)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.HelpOutline,
+                                contentDescription = "Help",
+                                tint = RailNavy,
+                                modifier = Modifier.size(24.dp)
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "How RailSaathi works",
+                                    fontSize = if (isSeniorMode) 17.sp else 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CharcoalText
+                                )
+                                Text(
+                                    text = "View 2-screen guide and quick instructions",
+                                    fontSize = 12.sp,
+                                    color = CharcoalTextMuted
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "View ➔",
+                            color = RailNavy,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
             }

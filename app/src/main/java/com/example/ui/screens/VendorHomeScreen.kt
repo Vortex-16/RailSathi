@@ -61,6 +61,7 @@ import com.example.data.model.JourneySession
 import com.example.data.model.OrderStatus
 import com.example.data.model.TrainCandidate
 import com.example.data.repository.TrainRouteDetails
+import com.example.ui.components.ContextualHintCard
 import com.example.ui.theme.CharcoalText
 import com.example.ui.theme.CharcoalTextMuted
 import com.example.ui.theme.GoldYellow
@@ -84,6 +85,8 @@ fun VendorHomeScreen(
     stationCandidates: List<TrainCandidate>,
     language: IndianLanguage,
     isSeniorMode: Boolean,
+    vendorHintShown: Boolean = true,
+    onDismissVendorHint: () -> Unit = {},
     onSelectVendorProfile: (String) -> Unit,
     onVerifyCoachBoarding: (vendorId: String, specialityId: String, coachNumber: String) -> Unit,
     onStartShift: (TrainCandidate, String) -> Unit,
@@ -445,6 +448,17 @@ fun VendorHomeScreen(
             }
 
             // Live Passenger Hunger Orders Feed
+            if (!vendorHintShown) {
+                item {
+                    ContextualHintCard(
+                        title = "New request",
+                        description = "Accept a request and choose your selling price.",
+                        onDismiss = onDismissVendorHint,
+                        testTag = "hint_vendor_new_request"
+                    )
+                }
+            }
+
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),

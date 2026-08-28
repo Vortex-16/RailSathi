@@ -22,10 +22,18 @@ interface ApiService {
         @Query("q") query: String
     ): Response<ApiEnvelope<List<RemoteStationDto>>>
 
+    @GET("api/lookup/stations")
+    suspend fun getStationDirectory(): Response<ApiEnvelope<List<RemoteStationDto>>>
+
     @GET("api/stations/{code}/trains")
     suspend fun getStationTrains(
         @Path("code") stationCode: String
     ): Response<ApiEnvelope<List<RemoteTrainDto>>>
+
+    @GET("api/stations/{code}/live")
+    suspend fun getStationLiveBoard(
+        @Path("code") stationCode: String
+    ): Response<ApiEnvelope<List<RemoteLiveTrainDto>>>
 
     @POST("api/requests")
     suspend fun createFoodRequest(

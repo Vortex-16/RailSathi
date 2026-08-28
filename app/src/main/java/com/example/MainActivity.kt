@@ -17,6 +17,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -27,6 +30,7 @@ import com.example.ui.components.BannerNotificationToast
 import com.example.ui.components.CollisionWarningDialog
 import com.example.ui.components.RailAppTopBar
 import com.example.ui.components.RailBottomNavBar
+import com.example.ui.components.TrainDiagnosticsDialog
 import com.example.ui.screens.BudgetExpenseScreen
 import com.example.ui.screens.CoachRadarScreen
 import com.example.ui.screens.OnboardingAuthScreen
@@ -82,8 +86,15 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
     val selectedVendorId by viewModel.selectedVendorId.collectAsState()
     val collisionResult by viewModel.collisionResult.collectAsState()
     val alertBanner by viewModel.alertBanner.collectAsState()
+    val isReplayingTutorial by viewModel.isReplayingTutorial.collectAsState()
+    val journeyHintShown by viewModel.journeyHintShown.collectAsState()
+    val foodHintShown by viewModel.foodHintShown.collectAsState()
+    val requestHintShown by viewModel.requestHintShown.collectAsState()
+    val vendorHintShown by viewModel.vendorHintShown.collectAsState()
 
-    // Permission launcher for Location and Notifications
+    var showDiagnosticsDialog by remember { mutableStateOf(false) }
+
+    // Permission launcher for Location and Notifications (Contextual)
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
@@ -92,34 +103,36 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
         viewModel.onLocationPermissionResult(fineGranted || coarseGranted)
     }
 
-    LaunchedEffect(Unit) {
-        val permissionsToRequest = mutableListOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION
-        )
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-
-        val notGranted = permissionsToRequest.filter {
-            ContextCompat.checkSelfPermission(context, it) != PackageManager.PERMISSION_GRANTED
-        }
-        if (notGranted.isNotEmpty()) {
-            permissionLauncher.launch(notGranted.toTypedArray())
+    // Contextual permission requester helper
+    fun checkAndRequestLocationPermission(onProceed: () -> Unit) {
+        val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!hasFine && !hasCoarse) {
+            val permissionsToRequest = mutableListOf(
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+            }
+            permissionLauncher.launch(permissionsToRequest.toTypedArray())
         } else {
             viewModel.onLocationPermissionResult(true)
         }
+        onProceed()
     }
 
     val activeVendor = allVendors.find { it.vendorId == selectedVendorId } ?: allVendors.firstOrNull()
 
-    if (!isOnboardingDone) {
+    if (!isOnboardingDone || isReplayingTutorial) {
         OnboardingAuthScreen(
             currentLanguage = currentLanguage,
             onLanguageSelect = { viewModel.setLanguage(it) },
+            onSimpleComplete = { viewModel.completeSimpleOnboarding(UserRole.TRAVELER) },
             onComplete = { name, phone, role, lang, senior, train, coach ->
                 viewModel.completeOnboarding(name, phone, role, lang, senior, train, coach)
-            }
+            },
+            onDismissReplay = if (isReplayingTutorial) { { viewModel.finishTutorialReplay() } } else null
         )
     } else {
         Scaffold(
@@ -168,12 +181,16 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 stationCandidates = stationCandidates,
                                 language = currentLanguage,
                                 isSeniorMode = isSeniorMode,
+                                vendorHintShown = vendorHintShown,
+                                onDismissVendorHint = { viewModel.dismissVendorHint() },
                                 onSelectVendorProfile = { viewModel.setSelectedVendorId(it) },
                                 onVerifyCoachBoarding = { vendorId, specId, coach ->
                                     viewModel.verifyAndBoardCoach(vendorId, specId, coach)
                                 },
                                 onStartShift = { candidate, coach ->
-                                    viewModel.startJourney(candidate, coach)
+                                    checkAndRequestLocationPermission {
+                                        viewModel.startJourney(candidate, coach)
+                                    }
                                 },
                                 onEndShift = {
                                     viewModel.endJourney()
@@ -211,14 +228,24 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 regularCommute = regularCommute,
                                 searchQuery = searchQuery,
                                 searchedTrains = searchedTrains,
+                                journeyHintShown = journeyHintShown,
+                                foodHintShown = foodHintShown,
+                                requestHintShown = requestHintShown,
+                                onDismissJourneyHint = { viewModel.dismissJourneyHint() },
+                                onDismissFoodHint = { viewModel.dismissFoodHint() },
+                                onDismissRequestHint = { viewModel.dismissRequestHint() },
                                 onSearchQueryChange = { viewModel.setSearchQuery(it) },
                                 onSelectCandidate = { viewModel.selectCandidate(it) },
                                 onClearCandidate = { viewModel.clearCandidate() },
                                 onStartJourney = { candidate, coach ->
-                                    viewModel.startJourney(candidate, coach)
+                                    checkAndRequestLocationPermission {
+                                        viewModel.startJourney(candidate, coach)
+                                    }
                                 },
                                 onStartRegularCommute = {
-                                    viewModel.startRegularCommuteJourney()
+                                    checkAndRequestLocationPermission {
+                                        viewModel.startRegularCommuteJourney()
+                                    }
                                 },
                                 onEndJourney = {
                                     viewModel.endJourney()
@@ -284,11 +311,20 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                             onLanguageChange = { viewModel.setLanguage(it) },
                             onToggleSeniorMode = { viewModel.toggleSeniorMode(it) },
                             onRouteChange = { viewModel.setRoute(it) },
+                            onReplayTutorial = { viewModel.replayTutorial() },
                             onSimulateStation = { stationCode ->
                                 viewModel.simulateAtStation(stationCode)
-                            }
+                            },
+                            onOpenDiagnostics = { showDiagnosticsDialog = true }
                         )
                     }
+                }
+
+                if (showDiagnosticsDialog) {
+                    TrainDiagnosticsDialog(
+                        diagnostics = viewModel.getDiagnosticsSnapshot(),
+                        onDismiss = { showDiagnosticsDialog = false }
+                    )
                 }
 
                 // In-App Notification Toast

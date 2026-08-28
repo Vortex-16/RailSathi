@@ -1,5 +1,70 @@
 package com.example.data.model
 
+enum class StationConfidence {
+    HIGH,      // Within tight geofence with high accuracy GPS (<350m, accuracy <= 60m)
+    MEDIUM,    // In vicinity (<1000m, accuracy <= 150m)
+    LOW,       // Marginal (<1500m, accuracy <= 250m)
+    UNKNOWN,   // Stale or low accuracy
+    NONE       // User at home / off-track (>1500m)
+}
+
+enum class TrainConfidence {
+    HIGH,
+    MEDIUM,
+    LOW,
+    UNKNOWN
+}
+
+enum class TrainStatus {
+    UPCOMING,
+    BOARDING_SOON,
+    DELAYED,
+    DEPARTED,
+    CANCELLED,
+    UNKNOWN
+}
+
+data class Station(
+    val code: String,
+    val name: String,
+    val latitude: Double,
+    val longitude: Double,
+    val zone: String = "",
+    val state: String = ""
+)
+
+data class StationDeparture(
+    val stationCode: String,
+    val trainNumber: String,
+    val trainName: String,
+    val scheduledDeparture: String,
+    val estimatedDeparture: String = "",
+    val actualDeparture: String = "",
+    val status: TrainStatus = TrainStatus.UPCOMING,
+    val destination: String,
+    val destinationCode: String = "",
+    val platform: String = "PF 1",
+    val delayMinutes: Int = 0,
+    val sourceTimestamp: Long = System.currentTimeMillis()
+)
+
+data class LocationDiagnosticsInfo(
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val accuracyMeters: Float = 0f,
+    val altitudeMeters: Double = 0.0,
+    val speedMps: Float = 0f,
+    val bearingDegrees: Float = 0f,
+    val timestampEpochMs: Long = 0L,
+    val ageSeconds: Long = 0L,
+    val provider: String = "none",
+    val isGpsEnabled: Boolean = false,
+    val isNetworkEnabled: Boolean = false,
+    val permissionType: String = "NONE",
+    val isMockLocation: Boolean = false,
+    val qualityGatePass: Boolean = false
+)
+
 enum class CoachType {
     CAB_DIVYANG,      // Front / Rear Motor Cab + Divyangjan Compartment
     LADIES_SPECIAL,   // Reserved for Ladies (মহিলা স্পেশাল)

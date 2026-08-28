@@ -24,6 +24,18 @@ class AppPreferences(context: Context) {
     private val _onboardingCompletedFlow = MutableStateFlow(isOnboardingCompleted())
     val onboardingCompletedFlow: StateFlow<Boolean> = _onboardingCompletedFlow.asStateFlow()
 
+    private val _journeyHintShownFlow = MutableStateFlow(isJourneyHintShown())
+    val journeyHintShownFlow: StateFlow<Boolean> = _journeyHintShownFlow.asStateFlow()
+
+    private val _foodHintShownFlow = MutableStateFlow(isFoodHintShown())
+    val foodHintShownFlow: StateFlow<Boolean> = _foodHintShownFlow.asStateFlow()
+
+    private val _requestHintShownFlow = MutableStateFlow(isRequestHintShown())
+    val requestHintShownFlow: StateFlow<Boolean> = _requestHintShownFlow.asStateFlow()
+
+    private val _vendorHintShownFlow = MutableStateFlow(isVendorHintShown())
+    val vendorHintShownFlow: StateFlow<Boolean> = _vendorHintShownFlow.asStateFlow()
+
     fun isOnboardingCompleted(): Boolean {
         return prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
     }
@@ -31,6 +43,43 @@ class AppPreferences(context: Context) {
     fun setOnboardingCompleted(completed: Boolean) {
         prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
         _onboardingCompletedFlow.value = completed
+    }
+
+    fun isJourneyHintShown(): Boolean = prefs.getBoolean(KEY_JOURNEY_HINT_SHOWN, false)
+    fun setJourneyHintShown(shown: Boolean) {
+        prefs.edit().putBoolean(KEY_JOURNEY_HINT_SHOWN, shown).apply()
+        _journeyHintShownFlow.value = shown
+    }
+
+    fun isFoodHintShown(): Boolean = prefs.getBoolean(KEY_FOOD_HINT_SHOWN, false)
+    fun setFoodHintShown(shown: Boolean) {
+        prefs.edit().putBoolean(KEY_FOOD_HINT_SHOWN, shown).apply()
+        _foodHintShownFlow.value = shown
+    }
+
+    fun isRequestHintShown(): Boolean = prefs.getBoolean(KEY_REQUEST_HINT_SHOWN, false)
+    fun setRequestHintShown(shown: Boolean) {
+        prefs.edit().putBoolean(KEY_REQUEST_HINT_SHOWN, shown).apply()
+        _requestHintShownFlow.value = shown
+    }
+
+    fun isVendorHintShown(): Boolean = prefs.getBoolean(KEY_VENDOR_HINT_SHOWN, false)
+    fun setVendorHintShown(shown: Boolean) {
+        prefs.edit().putBoolean(KEY_VENDOR_HINT_SHOWN, shown).apply()
+        _vendorHintShownFlow.value = shown
+    }
+
+    fun resetAllHints() {
+        prefs.edit()
+            .putBoolean(KEY_JOURNEY_HINT_SHOWN, false)
+            .putBoolean(KEY_FOOD_HINT_SHOWN, false)
+            .putBoolean(KEY_REQUEST_HINT_SHOWN, false)
+            .putBoolean(KEY_VENDOR_HINT_SHOWN, false)
+            .apply()
+        _journeyHintShownFlow.value = false
+        _foodHintShownFlow.value = false
+        _requestHintShownFlow.value = false
+        _vendorHintShownFlow.value = false
     }
 
     fun getSavedRole(): UserRole? {
@@ -71,5 +120,9 @@ class AppPreferences(context: Context) {
         private const val KEY_USER_ROLE = "key_user_role"
         private const val KEY_LANGUAGE_CODE = "key_language_code"
         private const val KEY_SENIOR_MODE = "key_senior_mode"
+        private const val KEY_JOURNEY_HINT_SHOWN = "key_journey_hint_shown"
+        private const val KEY_FOOD_HINT_SHOWN = "key_food_hint_shown"
+        private const val KEY_REQUEST_HINT_SHOWN = "key_request_hint_shown"
+        private const val KEY_VENDOR_HINT_SHOWN = "key_vendor_hint_shown"
     }
 }

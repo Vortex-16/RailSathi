@@ -8,7 +8,7 @@ package com.example
  */
 object AppConfig {
     // Single central configuration point for the entire Android application
-    const val API_BASE_URL: String = "https://railsaathi-backend.vercel.app"
+    const val API_BASE_URL: String = "https://rail-sathi-two.vercel.app"
 
     // Default station geofence radius in meters (120m near station)
     const val STATION_GEOFENCE_METERS: Float = 1500f

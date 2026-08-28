@@ -4,14 +4,16 @@ import com.example.data.local.AppDatabase
 import com.example.data.local.JourneySessionEntity
 import com.example.data.location.TrainLocationTracker
 import com.example.data.location.UserLocationInfo
-import com.example.data.model.IndianLocalRailwayDatabase
 import com.example.data.model.JourneySession
 import com.example.data.model.JourneyStatus
+import com.example.data.model.LocationDiagnosticsInfo
 import com.example.data.model.RailwayStation
+import com.example.data.model.StationConfidence
 import com.example.data.model.TrainCandidate
+import com.example.data.model.TrainConfidence
 import com.example.data.model.TrainContextState
+import com.example.data.repository.ApiDiagnosticsLog
 import com.example.data.repository.RailwayDataProvider
-import com.example.data.repository.TrainRouteDetails
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -22,6 +24,21 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
+
+data class TrainDiagnosticsSnapshot(
+    val locationDiagnostics: LocationDiagnosticsInfo,
+    val detectedStation: RailwayStation?,
+    val stationConfidence: StationConfidence,
+    val stationDistanceMeters: Double,
+    val isAtStation: Boolean,
+    val currentIstTime: String,
+    val upcomingTrainsCount: Int,
+    val upcomingTrains: List<TrainCandidate>,
+    val filteredDepartedTrains: List<FilteredDepartedItem>,
+    val activeJourney: JourneySession?,
+    val trainConfidence: TrainConfidence,
+    val recentApiLogs: List<ApiDiagnosticsLog>
+)
 
 class TrainContextEngine(
     private val db: AppDatabase,
@@ -50,14 +67,23 @@ class TrainContextEngine(
     private val _stationCandidates = MutableStateFlow<List<TrainCandidate>>(emptyList())
     val stationCandidates: StateFlow<List<TrainCandidate>> = _stationCandidates.asStateFlow()
 
+    private val _filteredDepartedTrains = MutableStateFlow<List<FilteredDepartedItem>>(emptyList())
+    val filteredDepartedTrains: StateFlow<List<FilteredDepartedItem>> = _filteredDepartedTrains.asStateFlow()
+
     private val _selectedCandidate = MutableStateFlow<TrainCandidate?>(null)
     val selectedCandidate: StateFlow<TrainCandidate?> = _selectedCandidate.asStateFlow()
+
+    private val _stationConfidence = MutableStateFlow(StationConfidence.NONE)
+    val stationConfidence: StateFlow<StationConfidence> = _stationConfidence.asStateFlow()
 
     private val _confidenceScore = MutableStateFlow(100)
     val confidenceScore: StateFlow<Int> = _confidenceScore.asStateFlow()
 
     private val _confidenceDescription = MutableStateFlow("Timetable Standby")
     val confidenceDescription: StateFlow<String> = _confidenceDescription.asStateFlow()
+
+    private val _currentIstTime = MutableStateFlow("")
+    val currentIstTime: StateFlow<String> = _currentIstTime.asStateFlow()
 
     init {
         // Observe location updates
@@ -88,30 +114,65 @@ class TrainContextEngine(
     private suspend fun handleLocationUpdate(loc: UserLocationInfo) {
         val activeJourney = activeJourneyFlow.value
 
+        // Execute StationDetectionEngine against station directory
+        val allStations = railwayDataProvider.getAllStations()
+        val detectionResult = StationDetectionEngine.detectStation(loc, allStations)
+
+        _stationConfidence.value = detectionResult.confidence
+        val detectedStation = detectionResult.currentStation ?: detectionResult.nearbyCandidates.firstOrNull()?.station
+
+        // Update location tracker with resolved station match & confidence
+        locationTracker.updateStationMatch(
+            station = detectedStation,
+            distanceKm = detectionResult.nearestDistanceMeters / 1000.0,
+            isNear = detectionResult.confidence == StationConfidence.HIGH || detectionResult.confidence == StationConfidence.MEDIUM,
+            confidence = detectionResult.confidence
+        )
+
         if (activeJourney == null || activeJourney.status != JourneyStatus.ACTIVE) {
             // User is not in an active journey
-            if (loc.isNearStation && loc.nearestStation != null) {
-                _nearbyStation.value = loc.nearestStation
-                val candidates = railwayDataProvider.getStationDepartures(loc.nearestStation.code)
-                _stationCandidates.value = candidates
+            if (detectionResult.isAtStation && detectionResult.currentStation != null) {
+                // High Confidence at Station
+                _nearbyStation.value = detectionResult.currentStation
+                val report = railwayDataProvider.getStationDeparturesReport(detectionResult.currentStation.code)
+                _stationCandidates.value = report.upcomingTrains
+                _filteredDepartedTrains.value = report.filteredDepartedTrains
+                _currentIstTime.value = report.currentIstTimeFormatted
+                if (_selectedCandidate.value == null) {
+                    _contextState.value = TrainContextState.NEAR_STATION
+                }
+            } else if (detectionResult.confidence == StationConfidence.MEDIUM && detectedStation != null) {
+                // Medium Confidence in vicinity
+                _nearbyStation.value = detectedStation
+                val report = railwayDataProvider.getStationDeparturesReport(detectedStation.code)
+                _stationCandidates.value = report.upcomingTrains
+                _filteredDepartedTrains.value = report.filteredDepartedTrains
+                _currentIstTime.value = report.currentIstTimeFormatted
                 if (_selectedCandidate.value == null) {
                     _contextState.value = TrainContextState.NEAR_STATION
                 }
             } else {
-                _nearbyStation.value = loc.nearestStation
+                // User is off-track (>1.5km) or low accuracy -> Clear candidates to prevent ghost suggestions
+                _nearbyStation.value = null
                 _stationCandidates.value = emptyList()
+                _filteredDepartedTrains.value = emptyList()
                 if (_selectedCandidate.value == null) {
                     _contextState.value = TrainContextState.IDLE
                 }
             }
         } else {
-            // User is in an active journey -> Track journey progression and calculate confidence
+            // User is in an active journey -> Track progression
             _contextState.value = TrainContextState.TRACKING
-            updateActiveJourneyTracking(activeJourney, loc)
+            updateActiveJourneyTracking(activeJourney, loc, detectedStation, detectionResult)
         }
     }
 
-    private suspend fun updateActiveJourneyTracking(journey: JourneySession, loc: UserLocationInfo) {
+    private suspend fun updateActiveJourneyTracking(
+        journey: JourneySession,
+        loc: UserLocationInfo,
+        nearestStn: RailwayStation?,
+        detection: StationDetectionResult
+    ) {
         val schedule = railwayDataProvider.getTrainSchedule(journey.trainNumber)
         if (schedule == null) {
             _confidenceScore.value = 75
@@ -119,28 +180,26 @@ class TrainContextEngine(
             return
         }
 
-        val nearestStn = loc.nearestStation
-        val distanceKm = loc.distanceToStationKm
+        val distanceKm = detection.nearestDistanceMeters / 1000.0
 
         if (loc.isGpsActive && nearestStn != null) {
-            val isStopInRoute = schedule.stops.any { it.stationCode == nearestStn.code }
-            if (isStopInRoute && distanceKm <= 1.2) {
+            val isStopInRoute = schedule.stops.any { it.stationCode.equals(nearestStn.code, ignoreCase = true) }
+            if (isStopInRoute && distanceKm <= 0.6) {
                 // High confidence - User is near a valid station on their train line
                 _confidenceScore.value = 95
-                _confidenceDescription.value = "Live GPS Corridor Match • High Confidence"
+                _confidenceDescription.value = "Live GPS Corridor Match • ${nearestStn.nameEn}"
                 journeyDao.updateProgress(
                     journeyId = journey.journeyId,
                     station = nearestStn.nameEn,
                     confidence = 95,
                     timestamp = System.currentTimeMillis()
                 )
-            } else if (isStopInRoute && distanceKm <= 4.0) {
-                _confidenceScore.value = 82
+            } else if (isStopInRoute && distanceKm <= 3.5) {
+                _confidenceScore.value = 85
                 _confidenceDescription.value = "Approaching ${nearestStn.nameEn} • Good Signal"
             } else {
-                // Off-track or between stations
                 _confidenceScore.value = 70
-                _confidenceDescription.value = "Timetable progression (GPS distance ~${String.format(java.util.Locale.US, "%.1f", distanceKm)}km)"
+                _confidenceDescription.value = "Timetable progression (Distance ~${String.format(java.util.Locale.US, "%.1f", distanceKm)}km)"
             }
         } else {
             _confidenceScore.value = 70
@@ -165,7 +224,6 @@ class TrainContextEngine(
         selectedCoach: String = "GS-2"
     ) {
         scope.launch {
-            // Complete any prior active journeys first
             journeyDao.completeAllActiveJourneys()
 
             val session = JourneySessionEntity(
@@ -247,6 +305,25 @@ class TrainContextEngine(
             _selectedCandidate.value = null
             _contextState.value = TrainContextState.IDLE
         }
+    }
+
+    fun getDiagnosticsSnapshot(): TrainDiagnosticsSnapshot {
+        val loc = locationState.value
+        val nearest = _nearbyStation.value
+        return TrainDiagnosticsSnapshot(
+            locationDiagnostics = loc.diagnostics,
+            detectedStation = nearest,
+            stationConfidence = _stationConfidence.value,
+            stationDistanceMeters = loc.distanceToStationKm * 1000.0,
+            isAtStation = loc.isNearStation && _stationConfidence.value == StationConfidence.HIGH,
+            currentIstTime = _currentIstTime.value,
+            upcomingTrainsCount = _stationCandidates.value.size,
+            upcomingTrains = _stationCandidates.value,
+            filteredDepartedTrains = _filteredDepartedTrains.value,
+            activeJourney = activeJourneyFlow.value,
+            trainConfidence = if (activeJourneyFlow.value != null) TrainConfidence.HIGH else TrainConfidence.UNKNOWN,
+            recentApiLogs = railwayDataProvider.getRecentApiLogs()
+        )
     }
 
     private fun JourneySessionEntity.toDomainModel(): JourneySession {

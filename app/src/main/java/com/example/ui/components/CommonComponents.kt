@@ -521,6 +521,65 @@ fun CollisionWarningDialog(
 }
 
 @Composable
+fun ContextualHintCard(
+    title: String,
+    description: String,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+    testTag: String = "contextual_hint_card"
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .testTag(testTag),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0FDF4)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF86EFAC))
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "💡 $title",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF166534)
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = description,
+                    fontSize = 12.sp,
+                    color = Color(0xFF15803D),
+                    lineHeight = 16.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Button(
+                onClick = onDismiss,
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF16A34A)),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                modifier = Modifier.testTag("${testTag}_got_it")
+            ) {
+                Text(
+                    text = "Got it",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun BannerNotificationToast(
     message: String?,
     isSeniorMode: Boolean
@@ -566,3 +625,5 @@ fun BannerNotificationToast(
         }
     }
 }
+
+
