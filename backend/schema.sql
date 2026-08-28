@@ -155,3 +155,111 @@ CREATE TABLE IF NOT EXISTS sync_queue (
 );
 
 CREATE INDEX IF NOT EXISTS idx_sync_idempotency ON sync_queue(idempotency_key);
+
+-- 9. User Profiles (Extended profile CRUD)
+CREATE TABLE IF NOT EXISTS profiles (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE UNIQUE,
+    full_name VARCHAR(128) NOT NULL,
+    email VARCHAR(128),
+    bio VARCHAR(256),
+    preferred_station VARCHAR(64),
+    regular_commute_route VARCHAR(256),
+    food_preferences TEXT[] DEFAULT ARRAY['vegetarian'],
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_profiles_user ON profiles(user_id);
+
+-- 10. Stations Directory Cache
+CREATE TABLE IF NOT EXISTS stations (
+    code VARCHAR(32) PRIMARY KEY,
+    name VARCHAR(128) NOT NULL,
+    state VARCHAR(64) NOT NULL,
+    zone VARCHAR(32) NOT NULL,
+    latitude DOUBLE PRECISION,
+    longitude DOUBLE PRECISION,
+    total_platforms INTEGER DEFAULT 4,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_stations_zone ON stations(zone);
+
+-- 11. Trains Directory Cache
+CREATE TABLE IF NOT EXISTS trains (
+    number VARCHAR(32) PRIMARY KEY,
+    name VARCHAR(256) NOT NULL,
+    type VARCHAR(64) NOT NULL, -- EMU Local, Express, Superfast, Mail
+    origin_code VARCHAR(32) REFERENCES stations(code),
+    dest_code VARCHAR(32) REFERENCES stations(code),
+    running_days VARCHAR(64) DEFAULT 'Daily',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 12. Train Routes & Stops
+CREATE TABLE IF NOT EXISTS train_routes (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    train_number VARCHAR(32) REFERENCES trains(number) ON DELETE CASCADE,
+    station_code VARCHAR(32) REFERENCES stations(code),
+    stop_sequence INTEGER NOT NULL,
+    scheduled_arrival VARCHAR(16),
+    scheduled_departure VARCHAR(16),
+    platform_number VARCHAR(16),
+    distance_km DOUBLE PRECISION DEFAULT 0.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_train_routes_train ON train_routes(train_number, stop_sequence);
+
+-- 13. Train Coach Composition (Dynamic coach layouts)
+CREATE TABLE IF NOT EXISTS train_coaches (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    train_number VARCHAR(32) REFERENCES trains(number) ON DELETE CASCADE,
+    coach_code VARCHAR(32) NOT NULL, -- CAB-1, GS-1, S1, B1, A1, H1, etc.
+    coach_type VARCHAR(32) NOT NULL, -- GENERAL, SLEEPER, AC_3_TIER, AC_2_TIER, VENDOR, CAB
+    position_sequence INTEGER NOT NULL,
+    max_capacity INTEGER DEFAULT 100,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_train_coaches_train ON train_coaches(train_number, position_sequence);
+
+-- 14. Monthly Commuter Budgets
+CREATE TABLE IF NOT EXISTS budgets (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    month_year VARCHAR(16) NOT NULL, -- e.g. "2026-08"
+    monthly_limit_inr DOUBLE PRECISION NOT NULL DEFAULT 1500.0,
+    spent_inr DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, month_year)
+);
+
+CREATE INDEX IF NOT EXISTS idx_budgets_user_month ON budgets(user_id, month_year);
+
+-- 15. Financial Transactions
+CREATE TABLE IF NOT EXISTS transactions (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+    order_id UUID REFERENCES orders(id) ON DELETE SET NULL,
+    amount_inr DOUBLE PRECISION NOT NULL,
+    type VARCHAR(32) NOT NULL, -- EXPENSE, VENDOR_PAYOUT, REFUND
+    category VARCHAR(64) NOT NULL DEFAULT 'FOOD',
+    description VARCHAR(256),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions(user_id);
+
+-- 16. User & Passenger Feedback
+CREATE TABLE IF NOT EXISTS feedback (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+    journey_id UUID REFERENCES journeys(id) ON DELETE SET NULL,
+    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
+    comment TEXT,
+    category VARCHAR(64) DEFAULT 'GENERAL',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

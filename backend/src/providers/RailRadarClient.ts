@@ -97,6 +97,14 @@ export class RailRadarClient {
   async getTrainsBetweenStations(fromCode: string, toCode: string) {
     return this.fetchRailRadar(`/trains/between/${encodeURIComponent(fromCode)}/${encodeURIComponent(toCode)}`, 600);
   }
+
+  // 6. Train Coaches & Rake Composition
+  async getTrainCoaches(trainNumber: string, stationCode?: string) {
+    const endpoint = stationCode
+      ? `/trains/${encodeURIComponent(trainNumber)}/coaches/${encodeURIComponent(stationCode)}`
+      : `/trains/${encodeURIComponent(trainNumber)}/coaches`;
+    return this.fetchRailRadar(endpoint, 86400);
+  }
 }
 
 export const railRadarClient = new RailRadarClient();

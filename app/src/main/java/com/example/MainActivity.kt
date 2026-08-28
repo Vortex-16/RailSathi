@@ -128,11 +128,12 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
         OnboardingAuthScreen(
             currentLanguage = currentLanguage,
             onLanguageSelect = { viewModel.setLanguage(it) },
-            onSimpleComplete = { viewModel.completeSimpleOnboarding(UserRole.TRAVELER) },
-            onComplete = { name, phone, role, lang, senior, train, coach ->
-                viewModel.completeOnboarding(name, phone, role, lang, senior, train, coach)
-            },
-            onDismissReplay = if (isReplayingTutorial) { { viewModel.finishTutorialReplay() } } else null
+            onCompleteAuth = { role, lang, email, name ->
+                viewModel.completeOnboardingWithGoogle(role, lang, email, name)
+                if (isReplayingTutorial) {
+                    viewModel.finishTutorialReplay()
+                }
+            }
         )
     } else {
         Scaffold(
@@ -293,7 +294,9 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                             isSeniorMode = isSeniorMode,
                             onAddExpense = { title, cat, amt, coach, note ->
                                 viewModel.addManualExpense(title, cat, amt, coach, note)
-                            }
+                            },
+                            onUpdateBudgetLimit = { viewModel.updateMonthlyBudgetLimit(it) },
+                            onResetBudget = { viewModel.resetMonthlyBudget() }
                         )
                     }
 
@@ -315,7 +318,11 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                             onSimulateStation = { stationCode ->
                                 viewModel.simulateAtStation(stationCode)
                             },
-                            onOpenDiagnostics = { showDiagnosticsDialog = true }
+                            onOpenDiagnostics = { showDiagnosticsDialog = true },
+                            onUpdateProfile = { name, phone, lang, senior, bio, stn, route ->
+                                viewModel.updateUserProfile(name, phone, lang, senior, bio, stn, route)
+                            },
+                            onLogoutAndClearData = { viewModel.logoutAndClearAppData() }
                         )
                     }
                 }

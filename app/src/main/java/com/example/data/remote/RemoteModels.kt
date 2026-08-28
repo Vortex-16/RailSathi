@@ -116,3 +116,80 @@ data class SyncPayloadItem(
 data class SyncRequest(
     @Json(name = "items") val items: List<SyncPayloadItem>
 )
+
+@JsonClass(generateAdapter = true)
+data class GoogleAuthRequest(
+    @Json(name = "idToken") val idToken: String? = null,
+    @Json(name = "googleId") val googleId: String? = null,
+    @Json(name = "email") val email: String? = null,
+    @Json(name = "displayName") val displayName: String? = null,
+    @Json(name = "photoUrl") val photoUrl: String? = null,
+    @Json(name = "role") val role: String = "TRAVELER",
+    @Json(name = "language") val language: String = "ENGLISH"
+)
+
+@JsonClass(generateAdapter = true)
+data class GoogleUserData(
+    @Json(name = "id") val id: String,
+    @Json(name = "email") val email: String,
+    @Json(name = "displayName") val displayName: String,
+    @Json(name = "photoUrl") val photoUrl: String? = null,
+    @Json(name = "role") val role: String,
+    @Json(name = "language") val language: String,
+    @Json(name = "sessionToken") val sessionToken: String
+)
+
+@JsonClass(generateAdapter = true)
+data class GoogleAuthResponseData(
+    @Json(name = "user") val user: GoogleUserData? = null,
+    @Json(name = "sessionToken") val sessionToken: String = ""
+)
+
+@JsonClass(generateAdapter = true)
+data class TrainCoachesResponseData(
+    @Json(name = "trainNumber") val trainNumber: String,
+    @Json(name = "coaches") val coaches: List<String> = emptyList(),
+    @Json(name = "source") val source: String = "live"
+)
+
+@JsonClass(generateAdapter = true)
+data class RemoteProfileDto(
+    @Json(name = "id") val id: String? = null,
+    @Json(name = "displayName") val displayName: String? = null,
+    @Json(name = "fullName") val fullName: String? = null,
+    @Json(name = "email") val email: String? = null,
+    @Json(name = "phone") val phone: String? = null,
+    @Json(name = "role") val role: String? = null,
+    @Json(name = "language") val language: String? = null,
+    @Json(name = "isSeniorMode") val isSeniorMode: Boolean? = null,
+    @Json(name = "bio") val bio: String? = null,
+    @Json(name = "preferredStation") val preferredStation: String? = null,
+    @Json(name = "regularRoute") val regularRoute: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class UpdateProfilePayload(
+    @Json(name = "displayName") val displayName: String,
+    @Json(name = "phone") val phone: String = "",
+    @Json(name = "language") val language: String = "ENGLISH",
+    @Json(name = "isSeniorMode") val isSeniorMode: Boolean = false,
+    @Json(name = "bio") val bio: String = "",
+    @Json(name = "preferredStation") val preferredStation: String = "",
+    @Json(name = "regularRoute") val regularRoute: String = ""
+)
+
+@JsonClass(generateAdapter = true)
+data class RemoteBudgetDto(
+    @Json(name = "userId") val userId: String,
+    @Json(name = "monthYear") val monthYear: String,
+    @Json(name = "monthlyLimit") val monthlyLimit: Double = 1500.0,
+    @Json(name = "spent") val spent: Double = 0.0,
+    @Json(name = "remaining") val remaining: Double = 1500.0
+)
+
+@JsonClass(generateAdapter = true)
+data class UpdateBudgetPayload(
+    @Json(name = "monthlyLimit") val monthlyLimit: Double,
+    @Json(name = "spent") val spent: Double? = null
+)
+

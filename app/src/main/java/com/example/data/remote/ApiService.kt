@@ -2,6 +2,7 @@ package com.example.data.remote
 
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
@@ -62,5 +63,47 @@ interface ApiService {
     @POST("api/sync")
     suspend fun syncOfflineQueue(
         @Body syncRequest: SyncRequest
+    ): Response<ApiEnvelope<Map<String, Any>>>
+
+    @POST("api/auth/google")
+    suspend fun authenticateGoogle(
+        @Body request: GoogleAuthRequest
+    ): Response<ApiEnvelope<GoogleAuthResponseData>>
+
+    @GET("api/trains/{number}/coaches")
+    suspend fun getTrainCoaches(
+        @Path("number") trainNumber: String
+    ): Response<ApiEnvelope<TrainCoachesResponseData>>
+
+    @GET("api/profile")
+    suspend fun getProfile(
+        @Header("X-User-Id") userId: String
+    ): Response<ApiEnvelope<RemoteProfileDto>>
+
+    @POST("api/profile")
+    suspend fun updateProfile(
+        @Header("X-User-Id") userId: String,
+        @Body payload: UpdateProfilePayload
+    ): Response<ApiEnvelope<RemoteProfileDto>>
+
+    @DELETE("api/profile")
+    suspend fun deleteProfile(
+        @Header("X-User-Id") userId: String
+    ): Response<ApiEnvelope<Map<String, Any>>>
+
+    @GET("api/budget")
+    suspend fun getBudget(
+        @Header("X-User-Id") userId: String
+    ): Response<ApiEnvelope<RemoteBudgetDto>>
+
+    @POST("api/budget")
+    suspend fun updateBudget(
+        @Header("X-User-Id") userId: String,
+        @Body payload: UpdateBudgetPayload
+    ): Response<ApiEnvelope<RemoteBudgetDto>>
+
+    @DELETE("api/budget")
+    suspend fun resetBudget(
+        @Header("X-User-Id") userId: String
     ): Response<ApiEnvelope<Map<String, Any>>>
 }

@@ -88,12 +88,130 @@ fun ProfileSettingsScreen(
     onRouteChange: (TrainRouteDetails) -> Unit,
     onReplayTutorial: () -> Unit = {},
     onSimulateStation: (String) -> Unit = {},
-    onOpenDiagnostics: () -> Unit = {}
+    onOpenDiagnostics: () -> Unit = {},
+    onUpdateProfile: (name: String, phone: String, lang: IndianLanguage, isSenior: Boolean, bio: String, preferredStation: String, regularRoute: String) -> Unit = { _, _, _, _, _, _, _ -> },
+    onLogoutAndClearData: () -> Unit = {}
 ) {
     var showRouteMenu by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
+    var showEditProfileDialog by remember { mutableStateOf(false) }
+    var showLogoutConfirmDialog by remember { mutableStateOf(false) }
     var pendingRoleToSwitch by remember { mutableStateOf<UserRole?>(null) }
     var selectedLanguageCandidate by remember { mutableStateOf(language) }
+
+    var editName by remember(user) { mutableStateOf(user?.name ?: "") }
+    var editPhone by remember(user) { mutableStateOf(user?.phone ?: "") }
+    var editBio by remember(user) { mutableStateOf("") }
+    var editPreferredStation by remember(user) { mutableStateOf("SDAH") }
+    var editRegularRoute by remember(user) { mutableStateOf("Sealdah - Ranaghat Local") }
+
+    // Edit Profile Modal Dialog
+    if (showEditProfileDialog) {
+        AlertDialog(
+            onDismissRequest = { showEditProfileDialog = false },
+            title = {
+                Text(
+                    text = "Edit Profile & Preferences",
+                    fontWeight = FontWeight.Bold,
+                    color = RailNavy
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = editName,
+                        onValueChange = { editName = it },
+                        label = { Text("Display Name") },
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_name")
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = editPhone,
+                        onValueChange = { editPhone = it },
+                        label = { Text("Phone Number") },
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_phone")
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = editPreferredStation,
+                        onValueChange = { editPreferredStation = it },
+                        label = { Text("Preferred Station (e.g. SDAH, DDJ)") },
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_station")
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = editRegularRoute,
+                        onValueChange = { editRegularRoute = it },
+                        label = { Text("Regular Commute Route") },
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_route")
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onUpdateProfile(
+                            editName,
+                            editPhone,
+                            language,
+                            isSeniorMode,
+                            editBio,
+                            editPreferredStation,
+                            editRegularRoute
+                        )
+                        showEditProfileDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
+                    modifier = Modifier.testTag("save_profile_button")
+                ) {
+                    Text("Save Changes")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditProfileDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    // Logout & Clear Data Confirmation Dialog
+    if (showLogoutConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showLogoutConfirmDialog = false },
+            title = {
+                Text(
+                    text = "Logout & Clear App Data?",
+                    fontWeight = FontWeight.Bold,
+                    color = RailNavy
+                )
+            },
+            text = {
+                Text(
+                    text = "This will clear your local sessions, saved routes, and cached data, returning you to the welcome onboarding screen.",
+                    fontSize = 14.sp,
+                    color = CharcoalText
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLogoutConfirmDialog = false
+                        onLogoutAndClearData()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFFDC2626)),
+                    modifier = Modifier.testTag("confirm_logout_button")
+                ) {
+                    Text("Logout & Reset")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLogoutConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     // Role Switch Confirmation Dialog
     if (pendingRoleToSwitch != null) {
@@ -242,7 +360,7 @@ fun ProfileSettingsScreen(
 
                         Spacer(modifier = Modifier.width(14.dp))
 
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = user?.name ?: if (role == UserRole.VENDOR) "Subhash Da" else "Commuter Passenger",
                                 fontSize = if (isSeniorMode) 20.sp else 18.sp,
@@ -259,6 +377,14 @@ fun ProfileSettingsScreen(
                                 fontSize = 12.sp,
                                 color = CharcoalTextMuted
                             )
+                        }
+
+                        androidx.compose.material3.OutlinedButton(
+                            onClick = { showEditProfileDialog = true },
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.testTag("edit_profile_button")
+                        ) {
+                            Text("Edit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -781,6 +907,49 @@ fun ProfileSettingsScreen(
                             fontSize = 12.sp,
                             color = CharcoalTextMuted,
                             lineHeight = 18.sp
+                        )
+                    }
+                }
+            }
+
+            // Logout & Clear Data Action Card
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { showLogoutConfirmDialog = true }
+                        .testTag("logout_card"),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
+                    border = BorderStroke(1.dp, Color(0xFFFCA5A5))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text(
+                                text = "Logout & Reset App Data",
+                                fontSize = if (isSeniorMode) 16.sp else 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFDC2626)
+                            )
+                            Text(
+                                text = "Clear session tokens, database cache, and restart onboarding",
+                                fontSize = 11.sp,
+                                color = CharcoalTextMuted
+                            )
+                        }
+
+                        Text(
+                            text = "Reset ➔",
+                            color = Color(0xFFDC2626),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }

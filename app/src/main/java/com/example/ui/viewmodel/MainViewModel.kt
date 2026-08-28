@@ -432,6 +432,154 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.setVendorHintShown(true)
     }
 
+    fun completeOnboardingWithGoogle(
+        role: UserRole,
+        language: IndianLanguage,
+        googleEmail: String?,
+        googleName: String?
+    ) {
+        viewModelScope.launch {
+            prefs.saveRole(role)
+            prefs.saveLanguage(language)
+            prefs.setOnboardingCompleted(true)
+            _currentRole.value = role
+
+            val effectiveName = googleName?.ifBlank { null } ?: if (role == UserRole.VENDOR) "Station Vendor" else "Daily Commuter"
+            val effectivePhone = "9876543210"
+            val userId = "usr_${System.currentTimeMillis()}"
+
+            val user = UserEntity(
+                userId = userId,
+                name = effectiveName,
+                phone = effectivePhone,
+                role = role.name,
+                languageCode = language.code,
+                isSeniorMode = prefs.getSavedSeniorMode(),
+                defaultTrain = "31821 Sealdah - Ranaghat Local",
+                defaultCoach = if (role == UserRole.VENDOR) "VND-1" else "GS-2"
+            )
+            repository.saveUser(user)
+
+            // Sync with backend Google Auth endpoint
+            try {
+                com.example.data.remote.ApiClient.apiService.authenticateGoogle(
+                    com.example.data.remote.GoogleAuthRequest(
+                        email = googleEmail,
+                        displayName = effectiveName,
+                        role = role.name,
+                        language = language.name
+                    )
+                )
+            } catch (_: Exception) {
+                // Offline fallback is already preserved in local database
+            }
+        }
+    }
+
+    fun logoutAndClearAppData() {
+        viewModelScope.launch {
+            // 1. End active journey
+            trainContextEngine.endJourney()
+            _activeRouteDetails.value = null
+
+            // 2. Clear Database
+            db.clearAllTables()
+
+            // 3. Clear Preferences
+            prefs.clearAll()
+            _currentRole.value = UserRole.GUEST
+
+            // 4. Return to Onboarding
+            _alertBanner.value = "Logged out. All local data cleared."
+            delay(1500)
+            _alertBanner.value = null
+        }
+    }
+
+    fun updateUserProfile(
+        name: String,
+        phone: String,
+        language: IndianLanguage,
+        isSenior: Boolean,
+        bio: String = "",
+        preferredStation: String = "",
+        regularRoute: String = ""
+    ) {
+        viewModelScope.launch {
+            val currentUser = activeUser.value
+            val uId = currentUser?.userId ?: "usr_commuter"
+            val updatedUser = UserEntity(
+                userId = uId,
+                name = name.ifBlank { "Daily Commuter" },
+                phone = phone,
+                role = currentUser?.role ?: currentRole.value.name,
+                languageCode = language.code,
+                isSeniorMode = isSenior,
+                defaultTrain = currentUser?.defaultTrain ?: "31821 Sealdah - Ranaghat Local",
+                defaultCoach = currentUser?.defaultCoach ?: "GS-2"
+            )
+            repository.saveUser(updatedUser)
+            prefs.saveLanguage(language)
+            prefs.saveSeniorMode(isSenior)
+
+            try {
+                com.example.data.remote.ApiClient.apiService.updateProfile(
+                    userId = uId,
+                    payload = com.example.data.remote.UpdateProfilePayload(
+                        displayName = name,
+                        phone = phone,
+                        language = language.name,
+                        isSeniorMode = isSenior,
+                        bio = bio,
+                        preferredStation = preferredStation,
+                        regularRoute = regularRoute
+                    )
+                )
+            } catch (_: Exception) {}
+
+            _alertBanner.value = "Profile updated successfully!"
+            delay(2000)
+            _alertBanner.value = null
+        }
+    }
+
+    fun deleteUserProfile() {
+        logoutAndClearAppData()
+    }
+
+    fun updateMonthlyBudgetLimit(limit: Double) {
+        viewModelScope.launch {
+            val currentUser = activeUser.value
+            if (currentUser != null) {
+                repository.saveUser(currentUser.copy(monthlyBudgetLimit = limit))
+                try {
+                    com.example.data.remote.ApiClient.apiService.updateBudget(
+                        userId = currentUser.userId,
+                        payload = com.example.data.remote.UpdateBudgetPayload(monthlyLimit = limit)
+                    )
+                } catch (_: Exception) {}
+            }
+            _alertBanner.value = "Monthly budget limit updated to ₹${limit.toInt()}!"
+            delay(2000)
+            _alertBanner.value = null
+        }
+    }
+
+    fun resetMonthlyBudget() {
+        viewModelScope.launch {
+            val currentUser = activeUser.value
+            if (currentUser != null) {
+                repository.saveUser(currentUser.copy(monthlyBudgetLimit = 1500.0))
+                try {
+                    com.example.data.remote.ApiClient.apiService.resetBudget(currentUser.userId)
+                } catch (_: Exception) {}
+            }
+            _alertBanner.value = "Monthly budget reset to default ₹1500."
+            delay(2000)
+            _alertBanner.value = null
+        }
+    }
+
     fun completeOnboarding(
         name: String,
         phone: String,

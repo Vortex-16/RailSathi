@@ -115,6 +115,14 @@ class AppPreferences(context: Context) {
         _seniorModeFlow.value = enabled
     }
 
+    fun clearAll() {
+        prefs.edit().clear().apply()
+        _onboardingCompletedFlow.value = false
+        _roleFlow.value = UserRole.GUEST
+        _languageFlow.value = IndianLanguage.ENGLISH
+        _seniorModeFlow.value = false
+    }
+
     companion object {
         private const val KEY_ONBOARDING_COMPLETED = "key_onboarding_completed"
         private const val KEY_USER_ROLE = "key_user_role"

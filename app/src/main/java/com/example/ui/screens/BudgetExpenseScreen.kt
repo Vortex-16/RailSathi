@@ -74,16 +74,88 @@ fun BudgetExpenseScreen(
     totalSpent: Double,
     language: IndianLanguage,
     isSeniorMode: Boolean,
-    onAddExpense: (title: String, category: String, amount: Double, coach: String, note: String) -> Unit
+    onAddExpense: (title: String, category: String, amount: Double, coach: String, note: String) -> Unit,
+    onUpdateBudgetLimit: (Double) -> Unit = {},
+    onResetBudget: () -> Unit = {}
 ) {
     val monthlyBudgetLimit = user?.monthlyBudgetLimit ?: 1500.0
     val budgetProgress = ((totalSpent / monthlyBudgetLimit).coerceIn(0.0, 1.0)).toFloat()
     val estimatedSavings = (totalSpent * 0.25).toInt() // Estimated ~25% saved vs fancy station stalls
 
     var showManualAddDialog by remember { mutableStateOf(false) }
+    var showEditLimitDialog by remember { mutableStateOf(false) }
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
+    var newLimitText by remember { mutableStateOf(monthlyBudgetLimit.toInt().toString()) }
     var newTitle by remember { mutableStateOf("") }
     var newAmount by remember { mutableStateOf("") }
     var newCoach by remember { mutableStateOf(user?.defaultCoach ?: "C-4") }
+
+    if (showEditLimitDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showEditLimitDialog = false },
+            title = {
+                Text("Edit Monthly Budget Limit", fontWeight = FontWeight.Bold, color = RailNavy)
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Set your target monthly commute snack & travel budget (₹):", fontSize = 14.sp, color = CharcoalText)
+                    OutlinedTextField(
+                        value = newLimitText,
+                        onValueChange = { newLimitText = it.filter { c -> c.isDigit() } },
+                        label = { Text("Budget Limit (₹)") },
+                        modifier = Modifier.fillMaxWidth().testTag("edit_budget_limit_input")
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val limit = newLimitText.toDoubleOrNull() ?: 1500.0
+                        onUpdateBudgetLimit(limit)
+                        showEditLimitDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
+                    modifier = Modifier.testTag("save_budget_limit_button")
+                ) {
+                    Text("Save Limit")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showEditLimitDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (showResetConfirmDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showResetConfirmDialog = false },
+            title = {
+                Text("Reset Monthly Budget", fontWeight = FontWeight.Bold, color = RailNavy)
+            },
+            text = {
+                Text("Are you sure you want to reset your monthly commute budget limit to ₹1500?", fontSize = 14.sp, color = CharcoalText)
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onResetBudget()
+                        showResetConfirmDialog = false
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = TerracottaAmber),
+                    modifier = Modifier.testTag("confirm_reset_budget_button")
+                ) {
+                    Text("Reset Budget")
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showResetConfirmDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -191,21 +263,26 @@ fun BudgetExpenseScreen(
 
                         Spacer(modifier = Modifier.height(6.dp))
 
+                        Spacer(modifier = Modifier.height(12.dp))
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(
-                                text = "${(budgetProgress * 100).toInt()}% utilized",
-                                fontSize = 11.sp,
-                                color = CharcoalTextMuted
-                            )
-                            Text(
-                                text = "Remaining: ₹${(monthlyBudgetLimit - totalSpent).toInt().coerceAtLeast(0)}",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NatureGreen
-                            )
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = { showEditLimitDialog = true },
+                                modifier = Modifier.weight(1f).testTag("edit_budget_limit_btn")
+                            ) {
+                                Text("Edit Limit", fontSize = 12.sp)
+                            }
+
+                            androidx.compose.material3.OutlinedButton(
+                                onClick = { showResetConfirmDialog = true },
+                                modifier = Modifier.weight(1f).testTag("reset_budget_btn"),
+                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = TerracottaAmber)
+                            ) {
+                                Text("Reset", fontSize = 12.sp)
+                            }
                         }
                     }
                 }
