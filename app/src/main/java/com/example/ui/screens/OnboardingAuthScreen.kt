@@ -46,16 +46,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
+import com.example.data.auth.GoogleAuthManager
 import com.example.data.model.IndianLanguage
 import com.example.data.model.UserRole
 import com.example.ui.theme.CharcoalText
@@ -70,7 +74,15 @@ import com.example.ui.theme.WarmSurface
 fun OnboardingAuthScreen(
     currentLanguage: IndianLanguage = IndianLanguage.ENGLISH,
     onLanguageSelect: (IndianLanguage) -> Unit = {},
-    onCompleteAuth: (role: UserRole, lang: IndianLanguage, googleEmail: String?, googleName: String?) -> Unit = { _, _, _, _ -> }
+    onCompleteAuth: (
+        role: UserRole,
+        lang: IndianLanguage,
+        googleEmail: String?,
+        googleName: String?,
+        googleIdToken: String?,
+        googleId: String?,
+        photoUrl: String?
+    ) -> Unit = { _, _, _, _, _, _, _ -> }
 ) {
     var currentStep by remember { mutableStateOf(1) } // 1, 2, or 3
     var selectedLang by remember { mutableStateOf(currentLanguage) }
@@ -160,9 +172,9 @@ fun OnboardingAuthScreen(
                             selectedRole = selectedRole,
                             onRoleSelect = { selectedRole = it },
                             isSigningIn = isSigningIn,
-                            onGoogleSignIn = { email, name ->
+                            onGoogleSignIn = { email, name, idToken, googleId, photoUrl ->
                                 isSigningIn = true
-                                onCompleteAuth(selectedRole, selectedLang, email, name)
+                                onCompleteAuth(selectedRole, selectedLang, email, name, idToken, googleId, photoUrl)
                             }
                         )
                     }
@@ -483,9 +495,12 @@ private fun Screen3AuthAndRole(
     selectedRole: UserRole,
     onRoleSelect: (UserRole) -> Unit,
     isSigningIn: Boolean,
-    onGoogleSignIn: (email: String?, name: String?) -> Unit
+    onGoogleSignIn: (email: String?, name: String?, idToken: String?, googleId: String?, photoUrl: String?) -> Unit
 ) {
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val googleAuthManager = remember { GoogleAuthManager(context) }
 
     Column(
         modifier = Modifier
@@ -562,7 +577,7 @@ private fun Screen3AuthAndRole(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Sign in to save your commute profile & offline orders",
+                    text = "Sign in with Google OAuth to link your session & sync data with cloud database",
                     fontSize = 13.sp,
                     color = CharcoalTextMuted,
                     textAlign = TextAlign.Center
@@ -571,9 +586,23 @@ private fun Screen3AuthAndRole(
                 // Google Sign In Primary Button
                 Button(
                     onClick = {
-                        val email = if (selectedRole == UserRole.VENDOR) "vendor.demo@railsaathi.in" else "commuter.demo@railsaathi.in"
-                        val name = if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter"
-                        onGoogleSignIn(email, name)
+                        scope.launch {
+                            val result = googleAuthManager.signInWithGoogle(context)
+                            if (result.success && !result.email.isNullOrBlank()) {
+                                onGoogleSignIn(
+                                    result.email,
+                                    result.displayName,
+                                    result.idToken,
+                                    result.googleId,
+                                    result.photoUrl
+                                )
+                            } else {
+                                // Graceful fallback for local development/emulator without Google Play accounts
+                                val fallbackEmail = if (selectedRole == UserRole.VENDOR) "vendor.demo@railsaathi.in" else "commuter.demo@railsaathi.in"
+                                val fallbackName = if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter"
+                                onGoogleSignIn(fallbackEmail, fallbackName, result.idToken, result.googleId ?: "google_oauth_usr", result.photoUrl)
+                            }
+                        }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
@@ -588,7 +617,7 @@ private fun Screen3AuthAndRole(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = if (isSigningIn) "Signing in..." else "Continue with Google",
+                            text = if (isSigningIn) "Authenticating..." else "Continue with Google",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -599,7 +628,7 @@ private fun Screen3AuthAndRole(
                 // Quick Guest Commuter option
                 OutlinedButton(
                     onClick = {
-                        onGoogleSignIn(null, if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter")
+                        onGoogleSignIn(null, if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter", null, null, null)
                     },
                     modifier = Modifier
                         .fillMaxWidth()

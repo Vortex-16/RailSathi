@@ -21,25 +21,28 @@ export default async function handler(req: any, res: any) {
 
   try {
     // Upsert user into PostgreSQL if DB is connected
-    await query(
-      `INSERT INTO users (id, device_id, installation_id, role, display_name, language, session_token)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+    const dbRes = await query(
+      `INSERT INTO users (device_id, installation_id, role, display_name, language, session_token)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (device_id) DO UPDATE
-       SET role = EXCLUDED.role, display_name = EXCLUDED.display_name, session_token = EXCLUDED.session_token, updated_at = CURRENT_TIMESTAMP`,
-      [userId, effectiveEmail, `inst_${userId}`, effectiveRole, effectiveName, effectiveLang, sessionToken]
+       SET role = EXCLUDED.role, display_name = EXCLUDED.display_name, session_token = EXCLUDED.session_token, updated_at = CURRENT_TIMESTAMP
+       RETURNING id`,
+      [effectiveEmail, `inst_${userId}`, effectiveRole, effectiveName, effectiveLang, sessionToken]
     );
 
-    // Upsert into profile
+    const actualDbId = dbRes?.rows?.[0]?.id ? String(dbRes.rows[0].id) : userId;
+
+    // Upsert into profile table
     await query(
       `INSERT INTO profiles (user_id, full_name, email)
        VALUES ($1, $2, $3)
        ON CONFLICT (user_id) DO UPDATE
        SET full_name = EXCLUDED.full_name, email = EXCLUDED.email, updated_at = CURRENT_TIMESTAMP`,
-      [userId, effectiveName, effectiveEmail]
+      [actualDbId, effectiveName, effectiveEmail]
     );
 
     const userObj = {
-      id: userId,
+      id: actualDbId,
       email: effectiveEmail,
       displayName: effectiveName,
       photoUrl: photoUrl || null,
@@ -49,7 +52,7 @@ export default async function handler(req: any, res: any) {
       createdAt: new Date().toISOString()
     };
 
-    memoryStore.users.set(userId, userObj);
+    memoryStore.users.set(actualDbId, userObj);
 
     return res.status(200).json(successResponse({
       user: userObj,

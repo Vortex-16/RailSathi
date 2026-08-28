@@ -436,7 +436,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         role: UserRole,
         language: IndianLanguage,
         googleEmail: String?,
-        googleName: String?
+        googleName: String?,
+        googleIdToken: String? = null,
+        googleId: String? = null,
+        photoUrl: String? = null
     ) {
         viewModelScope.launch {
             prefs.saveRole(role)
@@ -446,7 +449,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val effectiveName = googleName?.ifBlank { null } ?: if (role == UserRole.VENDOR) "Station Vendor" else "Daily Commuter"
             val effectivePhone = "9876543210"
-            val userId = "usr_${System.currentTimeMillis()}"
+            val userId = if (!googleId.isNullOrBlank()) "usr_$googleId" else "usr_${System.currentTimeMillis()}"
 
             val user = UserEntity(
                 userId = userId,
@@ -460,12 +463,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             )
             repository.saveUser(user)
 
-            // Sync with backend Google Auth endpoint
+            // Link user session to PostgreSQL users table via Vercel backend Google Auth endpoint
             try {
                 com.example.data.remote.ApiClient.apiService.authenticateGoogle(
                     com.example.data.remote.GoogleAuthRequest(
+                        idToken = googleIdToken,
+                        googleId = googleId,
                         email = googleEmail,
                         displayName = effectiveName,
+                        photoUrl = photoUrl,
                         role = role.name,
                         language = language.name
                     )

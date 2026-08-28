@@ -128,8 +128,8 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
         OnboardingAuthScreen(
             currentLanguage = currentLanguage,
             onLanguageSelect = { viewModel.setLanguage(it) },
-            onCompleteAuth = { role, lang, email, name ->
-                viewModel.completeOnboardingWithGoogle(role, lang, email, name)
+            onCompleteAuth = { role, lang, email, name, idToken, googleId, photoUrl ->
+                viewModel.completeOnboardingWithGoogle(role, lang, email, name, idToken, googleId, photoUrl)
                 if (isReplayingTutorial) {
                     viewModel.finishTutorialReplay()
                 }
