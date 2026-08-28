@@ -53,7 +53,7 @@ export class RailwayDataProvider {
   async searchStations(query: string): Promise<{ stations: StationDto[]; source: 'live' | 'fallback' }> {
     const live = await railRadarClient.searchStations(query);
     if (live && Array.isArray(live) && live.length > 0) {
-      return { stations: live, source: 'live' };
+      return { stations: live as StationDto[], source: 'live' };
     }
     const q = query.trim().toLowerCase();
     const matches = FALLBACK_STATIONS.filter(s => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q));
@@ -62,19 +62,19 @@ export class RailwayDataProvider {
 
   async getStationByCode(code: string): Promise<StationDto | null> {
     const live = await railRadarClient.getStationDirectory(code);
-    if (live) return live;
+    if (live) return live as StationDto;
     return FALLBACK_STATIONS.find(s => s.code.equalsIgnoreCase(code)) || null;
   }
 
   async getStationDepartures(stationCode: string): Promise<{ trains: TrainCandidateDto[]; source: 'live' | 'fallback' }> {
     const live = await railRadarClient.getStationTrains(stationCode);
     if (live && Array.isArray(live) && live.length > 0) {
-      return { trains: live, source: 'live' };
+      return { trains: live as TrainCandidateDto[], source: 'live' };
     }
     return { trains: FALLBACK_TRAINS, source: 'fallback' };
   }
 
-  async getTrainDetails(trainNumber: string) {
+  async getTrainDetails(trainNumber: string): Promise<{ train: any; source: 'live' | 'fallback' }> {
     const live = await railRadarClient.getTrainDetails(trainNumber);
     if (live) return { train: live, source: 'live' };
     const match = FALLBACK_TRAINS.find(t => t.trainNumber === trainNumber);
@@ -91,7 +91,7 @@ export class RailwayDataProvider {
     };
   }
 
-  async getLiveStatus(trainNumber: string) {
+  async getLiveStatus(trainNumber: string): Promise<{ status: any; source: 'live' | 'fallback' }> {
     const live = await railRadarClient.getTrainLiveStatus(trainNumber);
     if (live) return { status: live, source: 'live' };
     return {
