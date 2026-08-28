@@ -9,7 +9,7 @@ import healthHandler from '../api/health';
 import googleAuthHandler from '../api/auth/google';
 import budgetHandler from '../api/budget/index';
 import lookupStationsHandler from '../api/lookup/stations';
-import lookupSearchHandler from '../api/lookup/search/index';
+import lookupSearchHandler from '../api/lookup/search/stations';
 import orderPriceHandler from '../api/orders/[id]/price';
 import orderConfirmHandler from '../api/orders/[id]/confirm';
 import orderCompleteHandler from '../api/orders/[id]/complete';

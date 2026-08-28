@@ -5,7 +5,7 @@ import healthHandler from './health';
 import googleAuthHandler from './auth/google';
 import budgetHandler from './budget/index';
 import lookupStationsHandler from './lookup/stations';
-import lookupSearchHandler from './lookup/search/index';
+import lookupSearchHandler from './lookup/search/stations';
 import orderPriceHandler from './orders/[id]/price';
 import orderConfirmHandler from './orders/[id]/confirm';
 import orderCompleteHandler from './orders/[id]/complete';
