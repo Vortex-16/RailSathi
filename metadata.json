@@ -1,0 +1,6 @@
+{
+  "name": "RailSathi",
+  "description": "Connecting Indian local train passengers with verified vendors for timely snacks, coach coordination, fair income distribution, and expense tracking in multiple Indian languages.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
