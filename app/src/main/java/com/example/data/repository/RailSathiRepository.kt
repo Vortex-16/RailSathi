@@ -1,23 +1,35 @@
 package com.example.data.repository
 
+import android.content.Context
+import com.example.AppConfig
 import com.example.data.local.AppDatabase
 import com.example.data.local.ExpenseEntity
 import com.example.data.local.FoodRequestEntity
+import com.example.data.local.OrderEntity
 import com.example.data.local.SaleRecordEntity
 import com.example.data.local.UserEntity
 import com.example.data.local.VendorEntity
 import com.example.data.model.FoodItem
 import com.example.data.model.IndianLocalRailwayDatabase
-import com.example.data.model.RequestStatus
+import com.example.data.model.OrderStatus
+import com.example.data.nearby.NearbyConnectionsManager
+import com.example.data.remote.AcceptRequestPayload
+import com.example.data.remote.ApiClient
+import com.example.data.remote.ConfirmOrderPayload
+import com.example.data.remote.CreateFoodRequestPayload
+import com.example.data.remote.OfferPricePayload
+import com.example.data.sync.SyncManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import java.util.UUID
 
 sealed class CollisionCheckResult {
     data class Allowed(val coachNumber: String, val message: String) : CollisionCheckResult()
@@ -41,15 +53,19 @@ data class TrainRouteDetails(
 
 class RailSathiRepository(
     private val db: AppDatabase,
-    val railwayDataProvider: RailwayDataProvider = LocalStaticRailwayDataProvider()
+    val railwayDataProvider: RailwayDataProvider = HybridRailwayDataProvider(),
+    context: Context? = null
 ) {
-
     private val userDao = db.userDao()
     private val foodRequestDao = db.foodRequestDao()
+    private val orderDao = db.orderDao()
     private val vendorDao = db.vendorDao()
     private val expenseDao = db.expenseDao()
     private val saleRecordDao = db.saleRecordDao()
     private val journeyDao = db.journeySessionDao()
+
+    val syncManager = SyncManager(db)
+    val nearbyManager = context?.let { NearbyConnectionsManager(it) }
 
     val availableRoutes = IndianLocalRailwayDatabase.allSchedules.map { sched ->
         TrainRouteDetails(
@@ -109,7 +125,7 @@ class RailSathiRepository(
                     currentTrain = "31821",
                     currentCoach = "GS-1",
                     currentStation = "Dum Dum Jn",
-                    todaySalesCount = 0, // 0 sales -> Highest priority in Fair Dispatch!
+                    todaySalesCount = 0,
                     todayEarnings = 0.0,
                     isOnline = true,
                     lastSaleTimestamp = 0L
@@ -151,7 +167,7 @@ class RailSathiRepository(
                     currentTrain = "31821",
                     currentCoach = "VND-1",
                     currentStation = "Barrackpore",
-                    todaySalesCount = 0, // 0 sales -> Highest priority!
+                    todaySalesCount = 0,
                     todayEarnings = 0.0,
                     isOnline = true,
                     lastSaleTimestamp = 0L
@@ -168,7 +184,7 @@ class RailSathiRepository(
         userDao.insertUser(user)
     }
 
-    // Food Requests
+    // Food Requests Flow
     val activeRequestsFlow: Flow<List<FoodRequestEntity>> = foodRequestDao.getActiveRequests()
     val allRequestsFlow: Flow<List<FoodRequestEntity>> = foodRequestDao.getAllRequests()
 
@@ -176,29 +192,28 @@ class RailSathiRepository(
         return foodRequestDao.getRequestsForVendor(vendorId)
     }
 
-    // Smart Fair Distribution Algorithm:
-    // Only dispatches to vendors registered on this specific train.
-    // Picks matching vendor who has lowest sales count and longest idle time.
+    // Smart Fair Distribution Request Creation with NO predetermined price
     suspend fun createAndDispatchFoodRequest(
         passengerName: String,
         trainNumber: String,
         trainName: String,
         coachNumber: String,
         seatDetail: String,
-        foodItem: FoodItem
+        foodItem: FoodItem,
+        quantity: Int = 1,
+        note: String = ""
     ): FoodRequestEntity = withContext(Dispatchers.IO) {
+        val clientRequestId = "req_${UUID.randomUUID()}"
+        val validQty = quantity.coerceIn(1, AppConfig.MAX_ITEM_QUANTITY)
+
         val coachVendors = db.vendorDao().getVendorsInCoach(trainNumber, coachNumber)
         val eligibleVendors = if (coachVendors.isNotEmpty()) {
             coachVendors.filter { it.specialityItemId == foodItem.id || it.isOnline }
         } else {
-            // Check adjacent or train-wide vendors on the same train
-            db.vendorDao().getAllVendors()
-            val allOnTrain = vendorDao.getVendorByIdDirect("vendor_jhalmuri_1") // trigger query
-            db.vendorDao().getAllVendors()
             emptyList()
         }
 
-        // Fair income formula: lower sales count = higher priority
+        // Fair income score
         val bestVendor = eligibleVendors.minByOrNull { vendor ->
             val salesScore = vendor.todaySalesCount * 10
             val recencyPenalty = if (vendor.lastSaleTimestamp > 0) {
@@ -208,6 +223,7 @@ class RailSathiRepository(
         }
 
         val request = FoodRequestEntity(
+            clientRequestId = clientRequestId,
             passengerName = passengerName.ifBlank { "Traveler in $coachNumber" },
             trainNumber = trainNumber,
             trainName = trainName,
@@ -215,15 +231,140 @@ class RailSathiRepository(
             seatDetail = seatDetail,
             foodItemId = foodItem.id,
             foodItemName = foodItem.nameEn,
-            price = foodItem.defaultPrice,
-            status = if (bestVendor != null) RequestStatus.ASSIGNED.name else RequestStatus.PENDING.name,
+            quantity = validQty,
+            price = 0, // Customer NEVER sets the price
+            offeredUnitPrice = null,
+            calculatedTotalPrice = null,
+            status = if (bestVendor != null) OrderStatus.OFFERED_TO_VENDOR.name else OrderStatus.REQUESTED.name,
             timestamp = System.currentTimeMillis(),
             assignedVendorId = bestVendor?.vendorId,
             assignedVendorName = bestVendor?.name
         )
 
         val insertedId = foodRequestDao.insertRequest(request)
-        request.copy(id = insertedId)
+        val insertedRequest = request.copy(id = insertedId)
+
+        // Try Remote API if online
+        try {
+            val payload = CreateFoodRequestPayload(
+                clientRequestId = clientRequestId,
+                customerId = passengerName,
+                journeyId = "active_journey",
+                trainNumber = trainNumber,
+                coachNumber = coachNumber,
+                foodItemId = foodItem.id,
+                foodItemName = foodItem.nameEn,
+                quantity = validQty,
+                note = note
+            )
+            ApiClient.apiService.createFoodRequest(clientRequestId, payload)
+        } catch (_: Exception) {
+            // Queue for offline sync
+            val jsonObj = JSONObject().apply {
+                put("clientRequestId", clientRequestId)
+                put("passengerName", passengerName)
+                put("trainNumber", trainNumber)
+                put("coachNumber", coachNumber)
+                put("foodItemId", foodItem.id)
+                put("foodItemName", foodItem.nameEn)
+                put("quantity", validQty)
+            }
+            syncManager.queueOfflineOperation(clientRequestId, "CREATE_REQUEST", jsonObj)
+        }
+
+        // Broadcast to P2P Nearby Connections
+        nearbyManager?.broadcastLocalFoodRequest(
+            requestId = insertedId.toString(),
+            foodItemId = foodItem.id,
+            foodItemName = foodItem.nameEn,
+            quantity = validQty,
+            coach = coachNumber,
+            deviceId = passengerName
+        )
+
+        insertedRequest
+    }
+
+    // Vendor Accepts Request and Chooses Unit Price from ALLOWED_UNIT_PRICES
+    suspend fun vendorAcceptAndOfferPrice(
+        requestId: Long,
+        vendorId: String,
+        unitPrice: Int
+    ) = withContext(Dispatchers.IO) {
+        if (!AppConfig.ALLOWED_UNIT_PRICES.contains(unitPrice)) {
+            throw IllegalArgumentException("Unit price ₹$unitPrice is not allowed.")
+        }
+
+        val request = foodRequestDao.getRequestById(requestId) ?: return@withContext
+        val totalPrice = request.quantity * unitPrice
+
+        foodRequestDao.updatePriceConfirmation(requestId, unitPrice, totalPrice)
+        foodRequestDao.updateRequestStatus(requestId, OrderStatus.PRICE_CONFIRMED.name, vendorId, "Vendor Accepted")
+
+        // Sync to cloud
+        try {
+            ApiClient.apiService.offerPrice(
+                requestId = requestId.toString(),
+                payload = OfferPricePayload(vendorId = vendorId, unitPrice = unitPrice)
+            )
+        } catch (_: Exception) {
+            val jsonObj = JSONObject().apply {
+                put("requestId", requestId)
+                put("vendorId", vendorId)
+                put("unitPrice", unitPrice)
+                put("totalPrice", totalPrice)
+            }
+            syncManager.queueOfflineOperation("price_$requestId", "OFFER_PRICE", jsonObj)
+        }
+
+        // Send P2P Price Offer
+        nearbyManager?.sendPriceOffer(
+            requestId = requestId.toString(),
+            vendorId = vendorId,
+            unitPrice = unitPrice,
+            totalPrice = totalPrice,
+            coach = request.coachNumber
+        )
+    }
+
+    // Customer Confirms the Order after seeing the vendor price
+    suspend fun customerConfirmOrder(
+        requestId: Long,
+        customerId: String
+    ) = withContext(Dispatchers.IO) {
+        val request = foodRequestDao.getRequestById(requestId) ?: return@withContext
+        foodRequestDao.confirmOrderByCustomer(requestId)
+
+        val orderId = "ord_${UUID.randomUUID()}"
+        val order = OrderEntity(
+            orderId = orderId,
+            clientOrderId = orderId,
+            requestId = requestId,
+            customerId = customerId,
+            vendorId = request.assignedVendorId ?: "vendor_nearby",
+            trainNumber = request.trainNumber,
+            coachNumber = request.coachNumber,
+            foodItemName = request.foodItemName,
+            quantity = request.quantity,
+            unitPrice = request.offeredUnitPrice ?: 15,
+            totalPrice = request.calculatedTotalPrice ?: (request.quantity * 15),
+            status = OrderStatus.CUSTOMER_CONFIRMED.name
+        )
+        orderDao.insertOrder(order)
+
+        try {
+            ApiClient.apiService.confirmOrder(requestId.toString(), ConfirmOrderPayload(customerId))
+        } catch (_: Exception) {
+            val jsonObj = JSONObject().apply {
+                put("orderId", orderId)
+                put("requestId", requestId)
+                put("customerId", customerId)
+                put("totalPrice", order.totalPrice)
+            }
+            syncManager.queueOfflineOperation("confirm_$orderId", "CONFIRM_ORDER", jsonObj)
+        }
+
+        nearbyManager?.sendCustomerConfirm(requestId.toString(), customerId)
     }
 
     // Coach Collision Prevention Check
@@ -267,10 +408,6 @@ class RailSathiRepository(
         vendorDao.updateVendorCoach(vendorId, coachNumber)
     }
 
-    suspend fun acceptRequestByVendor(requestId: Long, vendorId: String, vendorName: String) = withContext(Dispatchers.IO) {
-        foodRequestDao.updateRequestStatus(requestId, RequestStatus.IN_TRANSIT.name, vendorId, vendorName)
-    }
-
     suspend fun completeDeliveryAndRecordSale(
         requestId: Long,
         vendorId: String,
@@ -284,7 +421,7 @@ class RailSathiRepository(
         val dateString = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(now))
 
         if (requestId > 0) {
-            foodRequestDao.updateRequestStatus(requestId, RequestStatus.DELIVERED.name, vendorId, "Delivered by Vendor")
+            foodRequestDao.updateRequestStatus(requestId, OrderStatus.COMPLETED.name, vendorId, "Delivered by Vendor")
         }
 
         // Record Vendor Sale
@@ -317,7 +454,7 @@ class RailSathiRepository(
     }
 
     suspend fun cancelRequest(requestId: Long) = withContext(Dispatchers.IO) {
-        foodRequestDao.updateRequestStatus(requestId, RequestStatus.CANCELLED.name, null, null)
+        foodRequestDao.updateRequestStatus(requestId, OrderStatus.CUSTOMER_CANCELLED.name, null, null)
     }
 
     // Vendors list

@@ -12,26 +12,61 @@ data class UserEntity(
     val languageCode: String = "hi",
     val isSeniorMode: Boolean = false,
     val defaultTrain: String = "EMU 31821 (Sealdah - Ranaghat)",
-    val defaultCoach: String = "C-4",
-    val monthlyBudgetLimit: Double = 1500.0
+    val defaultCoach: String = "GS-2",
+    val monthlyBudgetLimit: Double = 1500.0,
+    val sessionToken: String = ""
 )
 
 @Entity(tableName = "food_requests")
 data class FoodRequestEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val clientRequestId: String = "",
     val passengerName: String,
     val trainNumber: String,
     val trainName: String,
     val coachNumber: String,
-    val seatDetail: String,
+    val seatDetail: String = "",
     val foodItemId: String,
     val foodItemName: String,
-    val price: Int,
-    val status: String, // "PENDING", "ASSIGNED", "IN_TRANSIT", "DELIVERED", "CANCELLED"
+    val quantity: Int = 1,
+    val price: Int = 0, // Fallback / displayed
+    val offeredUnitPrice: Int? = null,
+    val calculatedTotalPrice: Int? = null,
+    val status: String = "REQUESTED", // "REQUESTED", "MATCHING", "OFFERED_TO_VENDOR", "VENDOR_ACCEPTED", "PRICE_CONFIRMED", "CUSTOMER_CONFIRMED", "FULFILLING", "COMPLETED", "REJECTED", "EXPIRED", "CUSTOMER_CANCELLED"
     val timestamp: Long = System.currentTimeMillis(),
+    val expiresAt: Long = System.currentTimeMillis() + 5 * 60 * 1000,
     val assignedVendorId: String? = null,
     val assignedVendorName: String? = null,
     val isDeliveredPaid: Boolean = false
+)
+
+@Entity(tableName = "orders")
+data class OrderEntity(
+    @PrimaryKey val orderId: String,
+    val clientOrderId: String,
+    val requestId: Long,
+    val customerId: String,
+    val vendorId: String,
+    val trainNumber: String,
+    val coachNumber: String,
+    val foodItemName: String,
+    val quantity: Int,
+    val unitPrice: Int,
+    val totalPrice: Int,
+    val status: String = "CUSTOMER_CONFIRMED",
+    val paymentStatus: String = "PENDING",
+    val createdAt: Long = System.currentTimeMillis(),
+    val completedAt: Long? = null
+)
+
+@Entity(tableName = "sync_queue")
+data class SyncQueueEntity(
+    @PrimaryKey val idempotencyKey: String,
+    val operationType: String,
+    val payloadJson: String,
+    val status: String = "PENDING", // PENDING, SYNCED, FAILED
+    val createdAt: Long = System.currentTimeMillis(),
+    val retryCount: Int = 0
 )
 
 @Entity(tableName = "vendors")
@@ -94,4 +129,3 @@ data class JourneySessionEntity(
     val isLiveTracking: Boolean = true,
     val trackingSource: String = "GPS"
 )
-

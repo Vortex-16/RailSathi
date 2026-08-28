@@ -6,6 +6,9 @@ import com.example.data.model.LiveTrainStatus
 import com.example.data.model.LocalTrainSchedule
 import com.example.data.model.RailwayStation
 import com.example.data.model.TrainCandidate
+import com.example.data.remote.ApiClient
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 interface RailwayDataProvider {
     suspend fun getAllStations(): List<RailwayStation>
@@ -16,6 +19,91 @@ interface RailwayDataProvider {
     suspend fun getAllRoutes(): List<TrainRouteDetails>
     suspend fun getLiveTrainStatus(trainNumber: String, currentStationCode: String?): LiveTrainStatus
     suspend fun searchStationsAndTrains(query: String): Pair<List<RailwayStation>, List<TrainCandidate>>
+}
+
+class HybridRailwayDataProvider(
+    private val localFallback: RailwayDataProvider = LocalStaticRailwayDataProvider()
+) : RailwayDataProvider {
+
+    override suspend fun getAllStations(): List<RailwayStation> = withContext(Dispatchers.IO) {
+        localFallback.getAllStations()
+    }
+
+    override suspend fun getNearestStation(lat: Double, lng: Double): Pair<RailwayStation?, Double> {
+        return localFallback.getNearestStation(lat, lng)
+    }
+
+    override suspend fun getStationDepartures(stationCode: String): List<TrainCandidate> = withContext(Dispatchers.IO) {
+        try {
+            val res = ApiClient.apiService.getStationTrains(stationCode)
+            if (res.isSuccessful && res.body()?.success == true) {
+                val remoteList = res.body()?.data
+                if (!remoteList.isNullOrEmpty()) {
+                    return@withContext remoteList.map { dto ->
+                        TrainCandidate(
+                            trainNumber = dto.trainNumber,
+                            trainName = dto.trainName,
+                            originStationCode = dto.originStationCode,
+                            originStationName = dto.originStationName,
+                            destStationCode = dto.destStationCode,
+                            destStationName = dto.destStationName,
+                            departureTime = dto.departureTime.ifEmpty { "08:30" },
+                            arrivalTime = "09:30",
+                            platform = dto.platform.ifEmpty { "PF 1" },
+                            zone = "ER",
+                            coachCodes = listOf("GS-1", "GS-2", "GS-3", "GS-4", "GS-5", "GS-6", "GS-7", "GS-8", "GS-9")
+                        )
+                    }
+                }
+            }
+        } catch (_: Exception) {
+            // Fallback gracefully
+        }
+        localFallback.getStationDepartures(stationCode)
+    }
+
+    override suspend fun getTrainSchedule(trainNumber: String): LocalTrainSchedule? {
+        return localFallback.getTrainSchedule(trainNumber)
+    }
+
+    override suspend fun getTrainRouteDetails(trainNumber: String): TrainRouteDetails? {
+        return localFallback.getTrainRouteDetails(trainNumber)
+    }
+
+    override suspend fun getAllRoutes(): List<TrainRouteDetails> {
+        return localFallback.getAllRoutes()
+    }
+
+    override suspend fun getLiveTrainStatus(trainNumber: String, currentStationCode: String?): LiveTrainStatus {
+        return localFallback.getLiveTrainStatus(trainNumber, currentStationCode)
+    }
+
+    override suspend fun searchStationsAndTrains(query: String): Pair<List<RailwayStation>, List<TrainCandidate>> = withContext(Dispatchers.IO) {
+        try {
+            val res = ApiClient.apiService.searchStations(query)
+            if (res.isSuccessful && res.body()?.success == true) {
+                val remoteStations = res.body()?.data
+                if (!remoteStations.isNullOrEmpty()) {
+                    val stations = remoteStations.map { st ->
+                        RailwayStation(
+                            code = st.code,
+                            nameEn = st.name,
+                            nameHi = st.name,
+                            nameBn = st.name,
+                            division = st.zone.ifEmpty { "Sealdah (SDAH)" },
+                            latitude = st.latitude ?: 22.5697,
+                            longitude = st.longitude ?: 88.3712
+                        )
+                    }
+                    val (_, localTrains) = localFallback.searchStationsAndTrains(query)
+                    return@withContext Pair(stations, localTrains)
+                }
+            }
+        } catch (_: Exception) {
+            // Fallback to local database
+        }
+        localFallback.searchStationsAndTrains(query)
+    }
 }
 
 class LocalStaticRailwayDataProvider : RailwayDataProvider {
@@ -154,7 +242,3 @@ class LocalStaticRailwayDataProvider : RailwayDataProvider {
         return r * c
     }
 }
-
-class RailwayApiAdapter(
-    private val localProvider: LocalStaticRailwayDataProvider = LocalStaticRailwayDataProvider()
-) : RailwayDataProvider by localProvider

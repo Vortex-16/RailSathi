@@ -6,13 +6,23 @@ enum class UserRole {
     GUEST
 }
 
-enum class RequestStatus {
-    PENDING,
-    ASSIGNED,
-    IN_TRANSIT,
-    DELIVERED,
-    CANCELLED
+enum class OrderStatus {
+    REQUESTED,
+    MATCHING,
+    OFFERED_TO_VENDOR,
+    VENDOR_ACCEPTED,
+    PRICE_CONFIRMED,
+    CUSTOMER_CONFIRMED,
+    FULFILLING,
+    COMPLETED,
+    REJECTED,
+    EXPIRED,
+    CUSTOMER_CANCELLED,
+    VENDOR_CANCELLED
 }
+
+// Backward compatibility alias
+typealias RequestStatus = OrderStatus
 
 data class FoodItem(
     val id: String,
@@ -20,30 +30,73 @@ data class FoodItem(
     val nameHi: String,
     val nameBn: String,
     val nameMr: String,
-    val defaultPrice: Int,
-    val category: String,
+    val nameTa: String = "",
+    val state: String = "West Bengal",
+    val region: String = "Eastern India",
+    val category: String = "Snacks",
     val isVeg: Boolean = true,
     val isJain: Boolean = false,
     val isSeniorFriendly: Boolean = false,
+    val dietaryTags: List<String> = listOf("Fresh", "Local"),
     val emoji: String = "🍲",
     val description: String = ""
 )
 
+data class FoodRequest(
+    val id: String,
+    val clientRequestId: String,
+    val customerId: String,
+    val journeyId: String,
+    val trainNumber: String,
+    val coachNumber: String,
+    val foodItemId: String,
+    val foodItemName: String,
+    val quantity: Int = 1,
+    val note: String = "",
+    val status: OrderStatus = OrderStatus.REQUESTED,
+    val matchedVendorId: String? = null,
+    val offeredUnitPrice: Int? = null,
+    val calculatedTotalPrice: Int? = null,
+    val createdAt: Long = System.currentTimeMillis(),
+    val expiresAt: Long = System.currentTimeMillis() + 5 * 60 * 1000
+)
+
 object RegionalSnacksCatalog {
     val items = listOf(
+        // West Bengal
         FoodItem(
             id = "jhalmuri_kol",
             nameEn = "Kolkata Jhalmuri",
             nameHi = "कोलकाता झालमुड़ी (मसाला मुड़ी)",
             nameBn = "কলকাতা খাঁটি ঝালমুড়ি",
             nameMr = "कोलकाता झालमुरी",
-            defaultPrice = 20,
+            nameTa = "கொல்கத்தா ஜால்முரி",
+            state = "West Bengal",
+            region = "Eastern",
             category = "Snacks",
             isVeg = true,
             isJain = false,
             isSeniorFriendly = true,
+            dietaryTags = listOf("Spicy", "Puffed Rice", "Mustard Oil"),
             emoji = "🥣",
             description = "Fresh spicy puffed rice with mustard oil, boiled potato, coconut and crunchy mixture"
+        ),
+        FoodItem(
+            id = "ghugni_kol",
+            nameEn = "Kolkata Matar Ghugni",
+            nameHi = "गरमा-गरम मटर घुगनी चाट",
+            nameBn = "গরম মটর ঘুঘনি ও নারকেল",
+            nameMr = "मटार घुगनी",
+            nameTa = "மடார் குக்னி",
+            state = "West Bengal",
+            region = "Eastern",
+            category = "Warm Food",
+            isVeg = true,
+            isJain = false,
+            isSeniorFriendly = true,
+            dietaryTags = listOf("Warm", "High Protein"),
+            emoji = "🍲",
+            description = "Warm spiced yellow pea curry garnished with fresh ginger, coriander and toasted cumin"
         ),
         FoodItem(
             id = "badam_roasted",
@@ -51,11 +104,14 @@ object RegionalSnacksCatalog {
             nameHi = "भुनी हुई गरम मूंगफली / बादाम",
             nameBn = "ভাজা গরম বাদাম",
             nameMr = "गरम भाजलेले शेंगदाणे",
-            defaultPrice = 15,
+            nameTa = "வறுத்த கடலை",
+            state = "West Bengal",
+            region = "Eastern",
             category = "Nuts",
             isVeg = true,
             isJain = true,
             isSeniorFriendly = false,
+            dietaryTags = listOf("Crunchy", "High Protein"),
             emoji = "🥜",
             description = "Hot sand-roasted crunchy peanuts with rock salt"
         ),
@@ -65,11 +121,14 @@ object RegionalSnacksCatalog {
             nameHi = "चटपटा चना जोर गरम",
             nameBn = "ঝাল চানা জোর গরম",
             nameMr = "मसालेदार चना जोर गरम",
-            defaultPrice = 20,
+            nameTa = "மசாலா கொண்டைக்கடலை",
+            state = "West Bengal",
+            region = "Eastern",
             category = "Snacks",
             isVeg = true,
             isJain = true,
             isSeniorFriendly = false,
+            dietaryTags = listOf("Tangy", "Black Gram"),
             emoji = "🌶️",
             description = "Flattened pressed black gram tossed with tangy lemon, green chilli and spice mix"
         ),
@@ -79,55 +138,35 @@ object RegionalSnacksCatalog {
             nameHi = "कटिंग मसाला चाय (कुल्हड़/कप)",
             nameBn = "গরম মশলা চা / লাল চা",
             nameMr = "कटिंग मसाला चहा",
-            defaultPrice = 10,
+            nameTa = "மசாலா டீ",
+            state = "All India",
+            region = "National",
             category = "Beverages",
             isVeg = true,
             isJain = true,
             isSeniorFriendly = true,
+            dietaryTags = listOf("Hot", "Cardamom & Ginger"),
             emoji = "☕",
             description = "Cardamom and ginger infused hot fresh milk tea"
         ),
+
+        // Maharashtra
         FoodItem(
             id = "vada_pav_mum",
             nameEn = "Mumbai Local Vada Pav",
             nameHi = "मुंबई गरम वड़ा पाव व चटनी",
             nameBn = "মুম্বাই গরম বড়া পাও",
             nameMr = "गरमागरम वडा पाव व लसूण चटणी",
-            defaultPrice = 20,
+            nameTa = "வடா பாவ்",
+            state = "Maharashtra",
+            region = "Western",
             category = "Warm Food",
             isVeg = true,
             isJain = false,
             isSeniorFriendly = true,
+            dietaryTags = listOf("Iconic", "Freshly Fried"),
             emoji = "🥪",
             description = "Crispy spiced potato dumpling in fresh pav with dry garlic chutney"
-        ),
-        FoodItem(
-            id = "samosa_singara",
-            nameEn = "Crispy Samosa / Singara (2 pcs)",
-            nameHi = "गरमा-गरम समोसा (2 पीस)",
-            nameBn = "মুচমুচে সিঙাড়া (২ পিস)",
-            nameMr = "खमंग समोसा",
-            defaultPrice = 20,
-            category = "Warm Food",
-            isVeg = true,
-            isJain = false,
-            isSeniorFriendly = true,
-            emoji = "🥟",
-            description = "Flaky crust stuffed with spiced potatoes, green peas and peanuts"
-        ),
-        FoodItem(
-            id = "fresh_cut_fruits",
-            nameEn = "Fresh Cut Fruits (Papaya/Guava)",
-            nameHi = "ताज़े कटे फल (अमरूद / पपीता चाट)",
-            nameBn = "তাজা কাটা পেঁপে ও পেয়ারা",
-            nameMr = "ताजी चिरलेली फळे (पेरू/पपई)",
-            defaultPrice = 30,
-            category = "Healthy",
-            isVeg = true,
-            isJain = true,
-            isSeniorFriendly = true,
-            emoji = "🍉",
-            description = "Hygienic sliced seasonal fruits with black salt and cumin powder (Sugar-safe)"
         ),
         FoodItem(
             id = "soft_poha",
@@ -135,39 +174,124 @@ object RegionalSnacksCatalog {
             nameHi = "भाप से बना नरम पोहा",
             nameBn = "নরম সুস্বাদু পোহা / চিঁড়ে",
             nameMr = "मऊ लुसलुशीत कांदे पोहे",
-            defaultPrice = 25,
+            nameTa = "அவல் பொங்கல் / போஹா",
+            state = "Maharashtra",
+            region = "Western",
             category = "Warm Food",
             isVeg = true,
             isJain = false,
             isSeniorFriendly = true,
+            dietaryTags = listOf("Light", "Easy to Digest"),
             emoji = "🍚",
-            description = "Light, non-spicy fluffy flattened rice with curry leaves and peanuts - easy to digest"
+            description = "Light, non-spicy fluffy flattened rice with curry leaves and peanuts"
+        ),
+
+        // Tamil Nadu / South India
+        FoodItem(
+            id = "idli_vada_combo",
+            nameEn = "Steamed Idli & Medu Vada",
+            nameHi = "भाप इडली व मेदु वड़ा सांभर",
+            nameBn = "নরম ইডলি ও মেদু বড়া",
+            nameMr = "मऊ इडली व मेदू वडा",
+            nameTa = "சூடான இட்லி & மெது வடை",
+            state = "Tamil Nadu",
+            region = "Southern",
+            category = "Warm Food",
+            isVeg = true,
+            isJain = false,
+            isSeniorFriendly = true,
+            dietaryTags = listOf("Steamed", "Probiotic"),
+            emoji = "🥟",
+            description = "Steamed rice cakes and crispy lentil doughnut with coconut chutney"
         ),
         FoodItem(
-            id = "chocolates_biscuit",
-            nameEn = "Chocolates & Glucose Biscuits",
-            nameHi = "चॉकलेट्स व ग्लूकोज बिस्कुट पैकेट",
-            nameBn = "চকোলেট ও গ্লুকোজ বিস্কুট",
-            nameMr = "चॉकलेट्स आणि ग्लुकोज बिस्किटे",
-            defaultPrice = 10,
-            category = "Packaged",
+            id = "murukku_snack",
+            nameEn = "Crispy Butter Murukku",
+            nameHi = "कुरकुरा बटर मुरुक्कू चकली",
+            nameBn = "মুচমুচে মাখন মুরুক্কু",
+            nameMr = "खमंग बटर मुरुक्कू",
+            nameTa = "வெண்ணெய் முறுக்கு",
+            state = "Tamil Nadu",
+            region = "Southern",
+            category = "Snacks",
+            isVeg = true,
+            isJain = true,
+            isSeniorFriendly = false,
+            dietaryTags = listOf("Crunchy", "Rice & Sesame"),
+            emoji = "🥨",
+            description = "Traditional crunchy golden spiral snack made with rice flour and cumin"
+        ),
+
+        // Kerala
+        FoodItem(
+            id = "banana_chips_ker",
+            nameEn = "Nendran Banana Chips (Coconut Oil)",
+            nameHi = "केरल केले के कुरकुरे चिप्स",
+            nameBn = "কেরালা স্পেশাল পাকা কলার চিপস",
+            nameMr = "केरळ केळीचे वेफर्स",
+            nameTa = "நேந்திரன் வாழைக்காய் சிப்ஸ்",
+            state = "Kerala",
+            region = "Southern",
+            category = "Snacks",
             isVeg = true,
             isJain = true,
             isSeniorFriendly = true,
-            emoji = "🍫",
-            description = "Sealed brand biscuits & milk chocolate bars for quick energy"
+            dietaryTags = listOf("Pure Coconut Oil", "Crispy"),
+            emoji = "🍌",
+            description = "Thinly sliced raw plantain fried in fresh coconut oil with turmeric and sea salt"
         ),
+
+        // Gujarat
+        FoodItem(
+            id = "khaman_dhokla",
+            nameEn = "Soft Khaman Dhokla",
+            nameHi = "मुलायम खमन ढोकला (राई-मिर्च)",
+            nameBn = "নরম তুলতুলে খমন ঢোকলা",
+            nameMr = "मऊ खमंग ढोकळा",
+            nameTa = "மெதுவான தோக்ளா",
+            state = "Gujarat",
+            region = "Western",
+            category = "Warm Food",
+            isVeg = true,
+            isJain = true,
+            isSeniorFriendly = true,
+            dietaryTags = listOf("Steamed", "Low Calorie"),
+            emoji = "🟨",
+            description = "Fluffy steamed gram flour savory cake tempered with mustard seeds and curry leaves"
+        ),
+        FoodItem(
+            id = "fafda_jalebi",
+            nameEn = "Crispy Fafda & Papaya Sambharo",
+            nameHi = "कुरकुरा फाफड़ा व पपीता चटनी",
+            nameBn = "মুচমুচে ফাফড়া ও পেঁপে চাটনি",
+            nameMr = "कुरकुरीत फाफडा",
+            nameTa = "பாப்டா",
+            state = "Gujarat",
+            region = "Western",
+            category = "Snacks",
+            isVeg = true,
+            isJain = false,
+            isSeniorFriendly = false,
+            dietaryTags = listOf("Crunchy", "Gram Flour"),
+            emoji = "🥖",
+            description = "Crispy gram flour strips seasoned with carom seeds and served with raw papaya salad"
+        ),
+
+        // Water & Packaged
         FoodItem(
             id = "water_bottle",
             nameEn = "Packaged Chilled Drinking Water",
             nameHi = "ठंडा सीलबंद पीने का पानी (1L)",
             nameBn = "ঠান্ডা সিল করা পানীয় জল",
             nameMr = "थंड सीलबंद पिण्याचे पाणी",
-            defaultPrice = 15,
+            nameTa = "குடிநீர் பாட்டில்",
+            state = "All India",
+            region = "National",
             category = "Beverages",
             isVeg = true,
             isJain = true,
             isSeniorFriendly = true,
+            dietaryTags = listOf("ISI Certified", "Sealed"),
             emoji = "💧",
             description = "ISI certified sealed chilled mineral water bottle"
         )

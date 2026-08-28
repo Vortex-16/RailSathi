@@ -30,10 +30,16 @@ interface FoodRequestDao {
     @Query("SELECT * FROM food_requests ORDER BY timestamp DESC")
     fun getAllRequests(): Flow<List<FoodRequestEntity>>
 
-    @Query("SELECT * FROM food_requests WHERE status = 'PENDING' OR status = 'ASSIGNED' OR status = 'IN_TRANSIT' ORDER BY timestamp DESC")
+    @Query("SELECT * FROM food_requests WHERE status != 'COMPLETED' AND status != 'CANCELLED' AND status != 'REJECTED' AND status != 'EXPIRED' ORDER BY timestamp DESC")
     fun getActiveRequests(): Flow<List<FoodRequestEntity>>
 
-    @Query("SELECT * FROM food_requests WHERE coachNumber = :coachNumber AND (status = 'PENDING' OR status = 'ASSIGNED' OR status = 'IN_TRANSIT')")
+    @Query("SELECT * FROM food_requests WHERE id = :id LIMIT 1")
+    suspend fun getRequestById(id: Long): FoodRequestEntity?
+
+    @Query("SELECT * FROM food_requests WHERE clientRequestId = :clientRequestId LIMIT 1")
+    suspend fun getRequestByClientId(clientRequestId: String): FoodRequestEntity?
+
+    @Query("SELECT * FROM food_requests WHERE coachNumber = :coachNumber AND status != 'COMPLETED' AND status != 'CANCELLED'")
     fun getActiveRequestsByCoach(coachNumber: String): Flow<List<FoodRequestEntity>>
 
     @Query("SELECT * FROM food_requests WHERE assignedVendorId = :vendorId ORDER BY timestamp DESC")
@@ -48,8 +54,50 @@ interface FoodRequestDao {
     @Query("UPDATE food_requests SET status = :status, assignedVendorId = :vendorId, assignedVendorName = :vendorName WHERE id = :id")
     suspend fun updateRequestStatus(id: Long, status: String, vendorId: String?, vendorName: String?)
 
+    @Query("UPDATE food_requests SET status = 'PRICE_CONFIRMED', offeredUnitPrice = :unitPrice, calculatedTotalPrice = :totalPrice WHERE id = :id")
+    suspend fun updatePriceConfirmation(id: Long, unitPrice: Int, totalPrice: Int)
+
+    @Query("UPDATE food_requests SET status = 'CUSTOMER_CONFIRMED' WHERE id = :id")
+    suspend fun confirmOrderByCustomer(id: Long)
+
     @Query("DELETE FROM food_requests WHERE id = :id")
     suspend fun deleteRequest(id: Long)
+}
+
+@Dao
+interface OrderDao {
+    @Query("SELECT * FROM orders ORDER BY createdAt DESC")
+    fun getAllOrders(): Flow<List<OrderEntity>>
+
+    @Query("SELECT * FROM orders WHERE vendorId = :vendorId ORDER BY createdAt DESC")
+    fun getOrdersByVendor(vendorId: String): Flow<List<OrderEntity>>
+
+    @Query("SELECT * FROM orders WHERE customerId = :customerId ORDER BY createdAt DESC")
+    fun getOrdersByCustomer(customerId: String): Flow<List<OrderEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertOrder(order: OrderEntity)
+
+    @Update
+    suspend fun updateOrder(order: OrderEntity)
+
+    @Query("UPDATE orders SET status = 'COMPLETED', completedAt = :completedAt, paymentStatus = 'PAID' WHERE orderId = :orderId")
+    suspend fun markOrderCompleted(orderId: String, completedAt: Long = System.currentTimeMillis())
+}
+
+@Dao
+interface SyncQueueDao {
+    @Query("SELECT * FROM sync_queue WHERE status = 'PENDING' ORDER BY createdAt ASC")
+    suspend fun getPendingSyncItems(): List<SyncQueueEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun queueItem(item: SyncQueueEntity)
+
+    @Query("UPDATE sync_queue SET status = 'SYNCED' WHERE idempotencyKey = :key")
+    suspend fun markSynced(key: String)
+
+    @Query("DELETE FROM sync_queue WHERE status = 'SYNCED'")
+    suspend fun clearSynced()
 }
 
 @Dao
@@ -144,4 +192,3 @@ interface JourneySessionDao {
     @Query("DELETE FROM journey_sessions WHERE status != 'ACTIVE'")
     suspend fun cleanOldJourneys()
 }
-

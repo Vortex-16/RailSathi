@@ -8,6 +8,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.AppConfig
 import com.example.data.engine.TrainContextEngine
 import com.example.data.local.AppDatabase
 import com.example.data.local.AppPreferences
@@ -25,7 +26,7 @@ import com.example.data.model.TrainCandidate
 import com.example.data.model.TrainContextState
 import com.example.data.model.UserRole
 import com.example.data.repository.CollisionCheckResult
-import com.example.data.repository.LocalStaticRailwayDataProvider
+import com.example.data.repository.HybridRailwayDataProvider
 import com.example.data.repository.RailSathiRepository
 import com.example.data.repository.RailwayDataProvider
 import com.example.data.repository.TrainRouteDetails
@@ -51,8 +52,8 @@ enum class AppNavTab {
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application)
-    val railwayDataProvider: RailwayDataProvider = LocalStaticRailwayDataProvider()
-    val repository = RailSathiRepository(db, railwayDataProvider)
+    val railwayDataProvider: RailwayDataProvider = HybridRailwayDataProvider()
+    val repository = RailSathiRepository(db, railwayDataProvider, application)
     private val prefs = AppPreferences(application)
     val locationTracker = TrainLocationTracker(application)
 
@@ -127,7 +128,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         initialValue = 0.0
     )
 
-    // Current active train route details (only non-null if there is an active journey or candidate preview)
+    // Current active train route details
     private val _activeRouteDetails = MutableStateFlow<TrainRouteDetails?>(null)
     val activeRouteDetails: StateFlow<TrainRouteDetails?> = _activeRouteDetails.asStateFlow()
     val selectedRoute: StateFlow<TrainRouteDetails?> = activeRouteDetails
@@ -150,12 +151,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _activeStationEta = MutableStateFlow(45)
     val activeStationEta: StateFlow<Int> = _activeStationEta.asStateFlow()
 
+    // Map of item ID -> quantity selected by traveler (default 1)
+    private val _selectedQuantities = MutableStateFlow<Map<String, Int>>(emptyMap())
+    val selectedQuantities: StateFlow<Map<String, Int>> = _selectedQuantities.asStateFlow()
+
     // Real-time Hunger Signal event bus for sub-second vendor alerts (<50ms latency)
     private val _instantOrderEvents = MutableSharedFlow<FoodRequestEntity>(extraBufferCapacity = 64)
     val instantOrderEvents: SharedFlow<FoodRequestEntity> = _instantOrderEvents.asSharedFlow()
 
+    private var lastRequestTimestamp: Long = 0L
+
     init {
-        // Sync active route with active journey session (never from location alone!)
         viewModelScope.launch {
             activeJourneySession.collect { session ->
                 if (session != null) {
@@ -170,7 +176,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
 
-        // Live ticker runs ONLY when there is an active journey
         viewModelScope.launch {
             while (true) {
                 delay(1000)
@@ -183,7 +188,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } else {
                         val nextIdx = (currentRoute.currentStationIndex + 1) % currentRoute.stations.size
                         _activeRouteDetails.value = currentRoute.copy(currentStationIndex = nextIdx)
-                        _activeStationEta.value = 45 // Next station halt countdown
+                        _activeStationEta.value = 45
                         triggerHapticNotification()
                     }
                 }
@@ -225,6 +230,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setSelectedVendorId(id: String) {
         _selectedVendorId.value = id
+    }
+
+    fun updateItemQuantity(itemId: String, delta: Int) {
+        val current = _selectedQuantities.value[itemId] ?: 1
+        val newQty = (current + delta).coerceIn(1, AppConfig.MAX_ITEM_QUANTITY)
+        _selectedQuantities.value = _selectedQuantities.value.toMutableMap().apply {
+            put(itemId, newQty)
+        }
     }
 
     fun switchRole(role: UserRole) {
@@ -280,7 +293,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val userId = activeUser.value?.userId ?: "traveler_1"
         trainContextEngine.startJourney(candidate, userId, coach)
         triggerHapticNotification()
-        val lang = currentLanguage.value
         _alertBanner.value = "Journey Started: ${candidate.trainName} ($coach)"
         viewModelScope.launch {
             delay(3000)
@@ -388,7 +400,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    fun sendHungerSignal(foodItem: FoodItem, seatNote: String) {
+    // Customer sends food request with Quantity stepper, UI Debounce & Idempotency
+    fun sendHungerSignal(foodItem: FoodItem, seatNote: String = "") {
+        val now = System.currentTimeMillis()
+        if (now - lastRequestTimestamp < 1500) {
+            // Debounce rapid duplicate taps
+            return
+        }
+        lastRequestTimestamp = now
+
         viewModelScope.launch {
             val session = activeJourneySession.value
             val route = _activeRouteDetails.value
@@ -402,6 +422,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val coach = _selectedCoach.value
             val userName = activeUser.value?.name ?: "Traveler"
+            val qty = _selectedQuantities.value[foodItem.id] ?: 1
 
             val req = repository.createAndDispatchFoodRequest(
                 passengerName = userName,
@@ -409,17 +430,55 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 trainName = route.trainName,
                 coachNumber = coach,
                 seatDetail = seatNote,
-                foodItem = foodItem
+                foodItem = foodItem,
+                quantity = qty
             )
 
-            // Broadcast on instant event bus (< 50ms latency)
             _instantOrderEvents.tryEmit(req)
 
             val lang = currentLanguage.value
-            _alertBanner.value = LocalizationManager.getString("hunger_signal_title", lang) + ": " + foodItem.nameEn + " ($coach)"
+            _alertBanner.value = "${LocalizationManager.getString("hunger_signal_title", lang)}: ${foodItem.nameEn} x$qty sent to vendors ($coach)"
             triggerHapticNotification()
 
             delay(3500)
+            _alertBanner.value = null
+        }
+    }
+
+    // Vendor accepts request and chooses unit price from allowed set
+    fun vendorAcceptAndOfferPrice(requestId: Long, unitPrice: Int) {
+        viewModelScope.launch {
+            val vendorId = selectedVendorId.value
+            try {
+                repository.vendorAcceptAndOfferPrice(requestId, vendorId, unitPrice)
+                _alertBanner.value = "Offered unit price ₹$unitPrice. Waiting for traveler confirmation."
+                triggerHapticNotification()
+            } catch (e: Exception) {
+                _alertBanner.value = e.message ?: "Could not offer price"
+            }
+            delay(3000)
+            _alertBanner.value = null
+        }
+    }
+
+    // Customer confirms price offered by vendor
+    fun customerConfirmOrder(requestId: Long) {
+        viewModelScope.launch {
+            val customerId = activeUser.value?.name ?: "Traveler"
+            repository.customerConfirmOrder(requestId, customerId)
+            _alertBanner.value = "Order Confirmed! Vendor is heading to Coach ${_selectedCoach.value}."
+            triggerHapticNotification()
+            delay(3500)
+            _alertBanner.value = null
+        }
+    }
+
+    // Customer cancels order
+    fun customerCancelOrder(requestId: Long) {
+        viewModelScope.launch {
+            repository.cancelRequest(requestId)
+            _alertBanner.value = "Order cancelled."
+            delay(2000)
             _alertBanner.value = null
         }
     }
@@ -450,29 +509,20 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _collisionResult.value = null
     }
 
-    fun vendorAcceptRequest(request: FoodRequestEntity, vendor: VendorEntity) {
-        viewModelScope.launch {
-            repository.acceptRequestByVendor(request.id, vendor.vendorId, vendor.name)
-            _alertBanner.value = "Accepted order in ${request.coachNumber} for ${request.foodItemName}!"
-            triggerHapticNotification()
-            delay(3000)
-            _alertBanner.value = null
-        }
-    }
-
     fun vendorDeliverAndCollect(request: FoodRequestEntity, vendor: VendorEntity) {
         viewModelScope.launch {
             val trainNum = _activeRouteDetails.value?.trainNumber ?: request.trainNumber
+            val amount = (request.calculatedTotalPrice ?: (request.quantity * 15)).toDouble()
             repository.completeDeliveryAndRecordSale(
                 requestId = request.id,
                 vendorId = vendor.vendorId,
-                foodItemName = request.foodItemName,
-                amount = request.price.toDouble(),
+                foodItemName = "${request.foodItemName} x${request.quantity}",
+                amount = amount,
                 coachNumber = request.coachNumber,
                 trainNumber = trainNum,
                 buyerName = request.passengerName
             )
-            _alertBanner.value = "Delivered & ₹${request.price} added to Today's Ledger!"
+            _alertBanner.value = "Delivered & ₹${amount.toInt()} added to Today's Ledger!"
             triggerHapticNotification()
             delay(3000)
             _alertBanner.value = null
@@ -512,12 +562,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _alertBanner.value = "Expense ₹${amount.toInt()} recorded in budget!"
             delay(3000)
             _alertBanner.value = null
-        }
-    }
-
-    fun cancelRequest(requestId: Long) {
-        viewModelScope.launch {
-            repository.cancelRequest(requestId)
         }
     }
 

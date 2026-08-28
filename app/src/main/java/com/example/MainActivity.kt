@@ -72,6 +72,7 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
     val regularCommute by viewModel.regularCommute.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchedTrains by viewModel.searchedTrains.collectAsState()
+    val selectedQuantities by viewModel.selectedQuantities.collectAsState()
 
     val activeUser by viewModel.activeUser.collectAsState()
     val activeRequests by viewModel.activeRequests.collectAsState()
@@ -177,8 +178,8 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 onEndShift = {
                                     viewModel.endJourney()
                                 },
-                                onAcceptRequest = { req, v ->
-                                    viewModel.vendorAcceptRequest(req, v)
+                                onAcceptAndOfferPrice = { req, v, price ->
+                                    viewModel.vendorAcceptAndOfferPrice(req.id, price)
                                 },
                                 onDeliverSale = { req, v ->
                                     viewModel.vendorDeliverAndCollect(req, v)
@@ -194,6 +195,10 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 selectedCoach = selectedCoach,
                                 onCoachSelect = { viewModel.setCoach(it) },
                                 activeRequests = activeRequests,
+                                selectedQuantities = selectedQuantities,
+                                onQuantityChange = { itemId, delta ->
+                                    viewModel.updateItemQuantity(itemId, delta)
+                                },
                                 journeySession = journeySession,
                                 selectedRoute = selectedRoute,
                                 locationInfo = locationInfo,
@@ -221,7 +226,10 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 onSendHungerSignal = { item, note ->
                                     viewModel.sendHungerSignal(item, note)
                                 },
-                                onCancelRequest = { viewModel.cancelRequest(it) },
+                                onConfirmOrder = { reqId ->
+                                    viewModel.customerConfirmOrder(reqId)
+                                },
+                                onCancelRequest = { viewModel.customerCancelOrder(it) },
                                 onSimulateStation = { stationCode ->
                                     viewModel.simulateAtStation(stationCode)
                                 }

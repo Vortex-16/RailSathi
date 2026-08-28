@@ -40,6 +40,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,12 +52,13 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.AppConfig
 import com.example.data.local.FoodRequestEntity
 import com.example.data.local.VendorEntity
 import com.example.data.location.UserLocationInfo
 import com.example.data.model.IndianLanguage
 import com.example.data.model.JourneySession
-import com.example.data.model.RequestStatus
+import com.example.data.model.OrderStatus
 import com.example.data.model.TrainCandidate
 import com.example.data.repository.TrainRouteDetails
 import com.example.ui.theme.CharcoalText
@@ -86,7 +88,7 @@ fun VendorHomeScreen(
     onVerifyCoachBoarding: (vendorId: String, specialityId: String, coachNumber: String) -> Unit,
     onStartShift: (TrainCandidate, String) -> Unit,
     onEndShift: () -> Unit,
-    onAcceptRequest: (FoodRequestEntity, VendorEntity) -> Unit,
+    onAcceptAndOfferPrice: (FoodRequestEntity, VendorEntity, Int) -> Unit,
     onDeliverSale: (FoodRequestEntity, VendorEntity) -> Unit,
     onQuickManualSale: (vendor: VendorEntity, foodName: String, amount: Double, coach: String) -> Unit
 ) {
@@ -105,6 +107,9 @@ fun VendorHomeScreen(
 
     var isOnline by remember { mutableStateOf(currentVendor.isOnline) }
     val coachList = listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+
+    // Selected unit price for pending requests: Map<RequestId, UnitPrice>
+    val selectedPrices = remember { mutableStateMapOf<Long, Int>() }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
@@ -425,7 +430,7 @@ fun VendorHomeScreen(
                                         }
                                         .padding(horizontal = 14.dp, vertical = 8.dp)
                                         .testTag("vendor_coach_$coach")
-                                    ) {
+                                ) {
                                     Text(
                                         text = coach,
                                         color = if (isCurrent) Color.White else CharcoalText,
@@ -488,6 +493,8 @@ fun VendorHomeScreen(
                 }
             } else {
                 items(activeRequests) { req ->
+                    val chosenPrice = selectedPrices[req.id] ?: (req.offeredUnitPrice ?: 15)
+
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
@@ -518,7 +525,7 @@ fun VendorHomeScreen(
                                     }
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
-                                        text = req.foodItemName,
+                                        text = "${req.foodItemName} × ${req.quantity}",
                                         fontSize = if (isSeniorMode) 16.sp else 14.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = CharcoalText
@@ -526,8 +533,8 @@ fun VendorHomeScreen(
                                 }
 
                                 Text(
-                                    text = "₹${req.price}",
-                                    fontSize = 16.sp,
+                                    text = if (req.offeredUnitPrice != null) "₹${req.calculatedTotalPrice}" else "Pending Price",
+                                    fontSize = 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TerracottaAmber
                                 )
@@ -544,28 +551,91 @@ fun VendorHomeScreen(
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (req.status == RequestStatus.PENDING.name || req.status == RequestStatus.ASSIGNED.name) {
+                            // Step 1: Request is pending price offer from vendor
+                            if (req.status == OrderStatus.REQUESTED.name || req.status == OrderStatus.OFFERED_TO_VENDOR.name) {
+                                Text(
+                                    text = "Select Unit Price for Passenger:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = CharcoalText
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    AppConfig.ALLOWED_UNIT_PRICES.forEach { price ->
+                                        val isSelected = chosenPrice == price
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(if (isSelected) RailNavy else Color(0xFFF1F5F9))
+                                                .clickable { selectedPrices[req.id] = price }
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            Text(
+                                                text = "₹$price",
+                                                color = if (isSelected) Color.White else CharcoalText,
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Total: ₹${chosenPrice * req.quantity}",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = CharcoalText
+                                    )
+
                                     Button(
-                                        onClick = { onAcceptRequest(req, currentVendor) },
+                                        onClick = { onAcceptAndOfferPrice(req, currentVendor, chosenPrice) },
                                         colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
                                         shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.testTag("accept_req_${req.id}")
+                                        modifier = Modifier.testTag("offer_price_btn_${req.id}")
                                     ) {
-                                        Text("Accept & Board ${req.coachNumber}")
+                                        Text("Offer ₹$chosenPrice / item")
                                     }
-                                } else if (req.status == RequestStatus.IN_TRANSIT.name) {
+                                }
+                            } else if (req.status == OrderStatus.PRICE_CONFIRMED.name) {
+                                Text(
+                                    text = "Offered ₹${req.offeredUnitPrice} / item. Waiting for customer confirmation...",
+                                    fontSize = 12.sp,
+                                    color = Color(0xFFD97706),
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            } else if (req.status == OrderStatus.CUSTOMER_CONFIRMED.name) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Confirmed! Total: ₹${req.calculatedTotalPrice}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = NatureGreen
+                                    )
+
                                     Button(
                                         onClick = { onDeliverSale(req, currentVendor) },
                                         colors = ButtonDefaults.buttonColors(containerColor = NatureGreen),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier.testTag("deliver_req_${req.id}")
                                     ) {
-                                        Text("Delivered & Collect ₹${req.price}")
+                                        Text("Deliver & Collect ₹${req.calculatedTotalPrice}")
                                     }
                                 }
                             }
