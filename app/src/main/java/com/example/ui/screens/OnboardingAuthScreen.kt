@@ -59,7 +59,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
-import com.example.data.auth.GoogleAuthManager
+import com.example.data.auth.AuthManager
 import com.example.data.model.IndianLanguage
 import com.example.data.model.UserRole
 import com.example.ui.theme.CharcoalText
@@ -500,7 +500,7 @@ private fun Screen3AuthAndRole(
     val scrollState = rememberScrollState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val googleAuthManager = remember { GoogleAuthManager(context) }
+    val authManager = remember { AuthManager(context) }
 
     Column(
         modifier = Modifier
@@ -587,7 +587,7 @@ private fun Screen3AuthAndRole(
                 Button(
                     onClick = {
                         scope.launch {
-                            val result = googleAuthManager.signInWithGoogle(context)
+                            val result = authManager.signInWithGoogle(context)
                             if (result.success && !result.email.isNullOrBlank()) {
                                 onGoogleSignIn(
                                     result.email,
