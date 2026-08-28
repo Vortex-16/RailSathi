@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RailSaathi API - Indian Railway Local Passenger & Hawker Mesh</title>
+  <style>
+    :root {
+      --primary: #1e3a8a;
+      --accent: #d97706;
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --green: #16a34a;
+      --border: #e2e8f0;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 2rem 1rem;
+    }
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+      color: white;
+      padding: 2.5rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(30, 58, 138, 0.2);
+      margin-bottom: 2rem;
+    }
+    .badge {
+      display: inline-block;
+      background: #16a34a;
+      color: white;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
+    }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    p.subtitle { opacity: 0.9; font-size: 1rem; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    h2 { font-size: 1.25rem; margin-bottom: 1rem; color: var(--primary); }
+    ul { list-style: none; }
+    li {
+      padding: 0.75rem 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    li:last-child { border-bottom: none; }
+    .endpoint {
+      font-family: monospace;
+      font-weight: 600;
+      color: #0f172a;
+      background: #f1f5f9;
+      padding: 0.25rem 0.5rem;
+      border-radius: 6px;
+    }
+    .method {
+      display: inline-block;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      color: white;
+    }
+    .get { background: #2563eb; }
+    .post { background: #16a34a; }
+    .patch { background: #d97706; }
+    .desc { color: var(--text-muted); font-size: 0.875rem; }
+    .footer {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.875rem;
+      margin-top: 2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge">● Online & Operational</span>
+      <h1>RailSaathi API</h1>
+      <p class="subtitle">Indian Railway Local Passenger & Hawker Commerce Backend Engine</p>
+    </div>
+
+    <div class="card">
+      <h2>API Endpoints</h2>
+      <ul>
+        <li>
+          <div>
+            <span class="method get">GET</span>
+            <span class="endpoint">/api/health</span>
+          </div>
+          <span class="desc">System health, DB status & timestamp</span>
+        </li>
+        <li>
+          <div>
+            <span class="method get">GET</span>
+            <span class="endpoint">/api/stations/search?q=SDAH</span>
+          </div>
+          <span class="desc">Search stations (Live + Fallback cache)</span>
+        </li>
+        <li>
+          <div>
+            <span class="method get">GET</span>
+            <span class="endpoint">/api/stations/:code/trains</span>
+          </div>
+          <span class="desc">Station departure board & train candidate list</span>
+        </li>
+        <li>
+          <div>
+            <span class="method get">GET</span>
+            <span class="endpoint">/api/trains/:number/live</span>
+          </div>
+          <span class="desc">Real-time train running status & GPS tracker</span>
+        </li>
+        <li>
+          <div>
+            <span class="method post">POST</span>
+            <span class="endpoint">/api/requests</span>
+          </div>
+          <span class="desc">Broadcast hunger signal & food order request</span>
+        </li>
+        <li>
+          <div>
+            <span class="method patch">PATCH</span>
+            <span class="endpoint">/api/orders/:id/price</span>
+          </div>
+          <span class="desc">Vendor price offer & quote submission</span>
+        </li>
+        <li>
+          <div>
+            <span class="method patch">PATCH</span>
+            <span class="endpoint">/api/orders/:id/confirm</span>
+          </div>
+          <span class="desc">Passenger confirmation & acceptance</span>
+        </li>
+        <li>
+          <div>
+            <span class="method post">POST</span>
+            <span class="endpoint">/api/orders/:id/complete</span>
+          </div>
+          <span class="desc">Complete delivery & record cash collection</span>
+        </li>
+        <li>
+          <div>
+            <span class="method post">POST</span>
+            <span class="endpoint">/api/sync</span>
+          </div>
+          <span class="desc">Idempotent offline batch sync queue</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="footer">
+      <p>RailSaathi Cloud Backend • Built with Vercel Serverless Functions & TypeScript</p>
+    </div>
+  </div>
+</body>
+</html>
