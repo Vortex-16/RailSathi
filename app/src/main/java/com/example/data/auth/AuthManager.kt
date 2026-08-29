@@ -1,6 +1,8 @@
 package com.example.data.auth
 
+import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import android.util.Log
 import androidx.credentials.ClearCredentialStateRequest
 import androidx.credentials.CredentialManager
@@ -8,6 +10,7 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
+import androidx.credentials.exceptions.NoCredentialException
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
@@ -31,8 +34,17 @@ data class AuthResult(
 class AuthManager(private val context: Context) {
     private val credentialManager = CredentialManager.create(context)
 
-    // Configurable Google Web Client ID for OAuth2 / ID token exchange
-    var serverClientId: String = "39959879941-8upe4qr36vc5q3cvkqt7vd4s0vq68cdl.apps.googleusercontent.com"
+    // IMPORTANT: serverClientId MUST be the Web Application Client ID (not Android Client ID)
+    var serverClientId: String = "39959879941-mjqtkvv24giqml1dt0hhpdua5ec9sqpt.apps.googleusercontent.com"
+
+    private fun findActivity(ctx: Context): Activity? {
+        var currentContext: Context? = ctx
+        while (currentContext is ContextWrapper) {
+            if (currentContext is Activity) return currentContext
+            currentContext = currentContext.baseContext
+        }
+        return null
+    }
 
     /**
      * Triggers Google One-Tap / ID token sign-in using CredentialManager.
@@ -48,6 +60,9 @@ class AuthManager(private val context: Context) {
             val digest = md.digest(rawNonce.toByteArray())
             val hashedNonce = digest.fold("") { str, it -> str + "%02x".format(it) }
 
+            val targetActivity = findActivity(activityContext) ?: activityContext
+
+            // 1. Google ID Option (One Tap & saved credentials)
             val googleIdOption = GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(filterByAuthorizedAccounts)
                 .setServerClientId(serverClientId)
@@ -55,12 +70,18 @@ class AuthManager(private val context: Context) {
                 .setNonce(hashedNonce)
                 .build()
 
+            // 2. Sign In With Google Option (Account Chooser prompt)
+            val signInWithGoogleOption = GetSignInWithGoogleOption.Builder(serverClientId)
+                .setNonce(hashedNonce)
+                .build()
+
             val request = GetCredentialRequest.Builder()
                 .addCredentialOption(googleIdOption)
+                .addCredentialOption(signInWithGoogleOption)
                 .build()
 
             val result = credentialManager.getCredential(
-                context = activityContext,
+                context = targetActivity,
                 request = request
             )
 
@@ -88,6 +109,12 @@ class AuthManager(private val context: Context) {
             AuthResult(
                 success = false,
                 errorMessage = "Sign-in cancelled"
+            )
+        } catch (e: NoCredentialException) {
+            Log.w(TAG, "No Google accounts/credentials found on device: ${e.message}")
+            AuthResult(
+                success = false,
+                errorMessage = "No Google Account found on this device. Please add a Google account or enter your name/email below."
             )
         } catch (e: GetCredentialException) {
             Log.e(TAG, "CredentialManager error: ${e.message}", e)
