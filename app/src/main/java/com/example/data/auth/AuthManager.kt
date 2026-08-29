@@ -32,7 +32,7 @@ class AuthManager(private val context: Context) {
     private val credentialManager = CredentialManager.create(context)
 
     // Configurable Google Web Client ID for OAuth2 / ID token exchange
-    var serverClientId: String = "100234567890-railsaathi.apps.googleusercontent.com"
+    var serverClientId: String = "39959879941-8upe4qr36vc5q3cvkqt7vd4s0vq68cdl.apps.googleusercontent.com"
 
     /**
      * Triggers Google One-Tap / ID token sign-in using CredentialManager.
