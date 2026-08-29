@@ -428,10 +428,20 @@ class LocalStaticRailwayDataProvider : RailwayDataProvider {
             it.code.lowercase().contains(q)
         }
 
-        val matchingTrains = IndianLocalRailwayDatabase.allSchedules.filter {
-            it.trainNumber.contains(q) ||
-            it.trainName.lowercase().contains(q) ||
-            it.stops.any { st -> st.stationName.lowercase().contains(q) || st.stationCode.lowercase().contains(q) }
+        val matchingStationCodes = matchingStations.map { it.code.lowercase() }.toSet()
+
+        val matchingTrains = IndianLocalRailwayDatabase.allSchedules.filter { sched ->
+            sched.trainNumber.lowercase().contains(q) ||
+            sched.trainName.lowercase().contains(q) ||
+            sched.originStationCode.lowercase().contains(q) ||
+            sched.destStationCode.lowercase().contains(q) ||
+            matchingStationCodes.contains(sched.originStationCode.lowercase()) ||
+            matchingStationCodes.contains(sched.destStationCode.lowercase()) ||
+            sched.stops.any { st ->
+                st.stationName.lowercase().contains(q) ||
+                st.stationCode.lowercase().contains(q) ||
+                matchingStationCodes.contains(st.stationCode.lowercase())
+            }
         }.map { sched ->
             val origin = IndianLocalRailwayDatabase.allStations.find { it.code == sched.originStationCode }
             val dest = IndianLocalRailwayDatabase.allStations.find { it.code == sched.destStationCode }

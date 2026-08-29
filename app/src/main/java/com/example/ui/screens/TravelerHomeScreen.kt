@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -45,6 +47,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -60,6 +63,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -234,26 +238,6 @@ fun TravelerHomeScreen(
                                 fontSize = if (isSeniorMode) 14.sp else 12.sp,
                                 color = CharcoalTextMuted
                             )
-
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Simulate Station:", fontSize = 11.sp, color = CharcoalTextMuted)
-                                listOf("SDAH" to "Sealdah", "BNR" to "Barasat", "CSMT" to "Mumbai CSMT").forEach { (code, name) ->
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color(0xFFE2E8F0))
-                                            .clickable { onSimulateStation(code) }
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                    ) {
-                                        Text(name, fontSize = 11.sp, color = RailNavy, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-                            }
                         }
                     }
                 }
@@ -413,7 +397,11 @@ fun TravelerHomeScreen(
 
                 // Timetable Search Bar
                 item {
-                    Column {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp)
+                    ) {
                         Text(
                             text = "Search All Suburban Locals",
                             fontSize = if (isSeniorMode) 17.sp else 15.sp,
@@ -425,13 +413,97 @@ fun TravelerHomeScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = onSearchQueryChange,
-                            placeholder = { Text("Search train number, station or name...") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+                            placeholder = {
+                                Text(
+                                    text = "Search train number, station or name...",
+                                    color = CharcoalTextMuted,
+                                    fontSize = 14.sp
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Search,
+                                    contentDescription = "Search",
+                                    tint = RailNavy
+                                )
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { onSearchQueryChange("") }) {
+                                        Icon(
+                                            imageVector = Icons.Default.Close,
+                                            contentDescription = "Clear search",
+                                            tint = CharcoalTextMuted
+                                        )
+                                    }
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Search
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onSearch = {
+                                    onSearchQueryChange(searchQuery)
+                                }
+                            ),
                             singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedTextColor = CharcoalText,
+                                unfocusedTextColor = CharcoalText,
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White,
+                                cursorColor = RailNavy,
+                                focusedBorderColor = RailNavy,
+                                unfocusedBorderColor = WarmBorder
+                            ),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .testTag("timetable_search_input")
                         )
+
+                        if (searchQuery.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            if (searchedTrains.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "Search Results (${searchedTrains.size} trains)",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = RailNavy
+                                    )
+                                    TextButton(onClick = { onSearchQueryChange("") }) {
+                                        Text("Clear", fontSize = 12.sp, color = CharcoalTextMuted)
+                                    }
+                                }
+                            } else {
+                                Card(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
+                                    border = BorderStroke(1.dp, WarmBorder)
+                                ) {
+                                    Column(modifier = Modifier.padding(14.dp)) {
+                                        Text(
+                                            text = "No trains found for \"$searchQuery\"",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = CharcoalText
+                                        )
+                                        Spacer(modifier = Modifier.height(4.dp))
+                                        Text(
+                                            text = "Try searching by station name (e.g. Sealdah, Howrah, Bandel, Naihati, Dadar) or 5-digit train number (e.g. 31811, 37211).",
+                                            fontSize = 12.sp,
+                                            color = CharcoalTextMuted
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

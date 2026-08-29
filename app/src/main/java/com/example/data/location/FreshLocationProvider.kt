@@ -57,47 +57,43 @@ class FreshLocationProvider(private val context: Context) {
         LocationServices.getFusedLocationProviderClient(context)
     }
 
-    // Default to Sealdah Junction (SDAH) as baseline authentic suburban reference
-    private val defaultStation = IndianLocalRailwayDatabase.allStations.firstOrNull { it.code == "SDAH" }
-        ?: IndianLocalRailwayDatabase.allStations.first()
-
     private val initialDiag = LocationDiagnosticsInfo(
-        latitude = defaultStation.latitude,
-        longitude = defaultStation.longitude,
-        accuracyMeters = 12f,
-        altitudeMeters = 14.0,
+        latitude = null,
+        longitude = null,
+        accuracyMeters = 0f,
+        altitudeMeters = 0.0,
         speedMps = 0f,
         bearingDegrees = 0f,
-        timestampEpochMs = System.currentTimeMillis(),
-        ageSeconds = 2L,
-        provider = "fused_gps",
-        isGpsEnabled = true,
-        isNetworkEnabled = true,
-        permissionType = "FINE (Precise)",
+        timestampEpochMs = 0L,
+        ageSeconds = 0L,
+        provider = "none",
+        isGpsEnabled = false,
+        isNetworkEnabled = false,
+        permissionType = "None",
         isMockLocation = false,
-        qualityGatePass = true
+        qualityGatePass = false
     )
 
     private val _locationState = MutableStateFlow(
         UserLocationInfo(
-            latitude = defaultStation.latitude,
-            longitude = defaultStation.longitude,
-            accuracyMeters = 12f,
+            latitude = null,
+            longitude = null,
+            accuracyMeters = 0f,
             speedMps = 0f,
             bearingDegrees = 0f,
-            altitudeMeters = 14.0,
-            locationTimestamp = System.currentTimeMillis(),
-            locationAgeSeconds = 2L,
-            provider = "fused_gps",
-            isGpsActive = true,
-            hasPermission = true,
-            isFinePermission = true,
+            altitudeMeters = 0.0,
+            locationTimestamp = 0L,
+            locationAgeSeconds = 0L,
+            provider = "none",
+            isGpsActive = false,
+            hasPermission = false,
+            isFinePermission = false,
             isMock = false,
-            nearestStation = defaultStation,
-            distanceToStationKm = 0.08,
-            isNearStation = true,
-            stationConfidence = StationConfidence.HIGH,
-            statusMessage = "Live GPS Active (±12m)",
+            nearestStation = null,
+            distanceToStationKm = 0.0,
+            isNearStation = false,
+            stationConfidence = StationConfidence.NONE,
+            statusMessage = "Acquiring GPS...",
             currentPlatform = "PF 1",
             isSimulationMode = false,
             diagnostics = initialDiag
@@ -110,21 +106,21 @@ class FreshLocationProvider(private val context: Context) {
 
     // Quality gate thresholds
     companion object {
-        const val MAX_LOCATION_AGE_SECONDS = 60L
-        const val MAX_ACCEPTABLE_LOCATION_ACCURACY_METERS = 250f
+        const val MAX_LOCATION_AGE_SECONDS = 120L
+        const val MAX_ACCEPTABLE_LOCATION_ACCURACY_METERS = 500f
         const val HIGH_ACCURACY_THRESHOLD_METERS = 75f
     }
 
     private val fusedLocationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
             val location = result.lastLocation ?: return
-            processFreshLocation(location, "fused")
+            processFreshLocation(location, "fused_gps")
         }
     }
 
     private val fallbackLocationListener = object : LocationListener {
         override fun onLocationChanged(location: Location) {
-            processFreshLocation(location, location.provider ?: "location_manager")
+            processFreshLocation(location, location.provider ?: "hardware_gps")
         }
 
         @Deprecated("Deprecated in Java")
@@ -138,10 +134,12 @@ class FreshLocationProvider(private val context: Context) {
         _locationState.value = _locationState.value.copy(
             hasPermission = hasPerm,
             isFinePermission = fineGranted,
-            statusMessage = if (hasPerm) "Permission active" else "Location permission not granted"
+            statusMessage = if (hasPerm) "GPS Active" else "Location permission required"
         )
-        if (hasPerm && !isTracking) {
+        if (hasPerm) {
             startTracking()
+        } else {
+            stopTracking()
         }
     }
 
@@ -151,10 +149,22 @@ class FreshLocationProvider(private val context: Context) {
         isTracking = true
 
         try {
+            // Check immediately for any cached system location across all providers
+            locationManager?.let { lm ->
+                val gpsLoc = try { lm.getLastKnownLocation(LocationManager.GPS_PROVIDER) } catch (_: Exception) { null }
+                val netLoc = try { lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER) } catch (_: Exception) { null }
+                val passiveLoc = try { lm.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER) } catch (_: Exception) { null }
+
+                val bestLast = listOfNotNull(gpsLoc, netLoc, passiveLoc).maxByOrNull { it.time }
+                if (bestLast != null) {
+                    processFreshLocation(bestLast, bestLast.provider ?: "last_known")
+                }
+            }
+
             // 1. Try Google Play Services Fused Location Provider with Priority.PRIORITY_HIGH_ACCURACY
-            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 7000L)
-                .setMinUpdateIntervalMillis(3500L)
-                .setMinUpdateDistanceMeters(10f)
+            val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000L)
+                .setMinUpdateIntervalMillis(2500L)
+                .setMinUpdateDistanceMeters(5f)
                 .setWaitForAccurateLocation(false)
                 .build()
 
@@ -167,7 +177,7 @@ class FreshLocationProvider(private val context: Context) {
                     startLocationManagerFallback()
                 }
 
-            // Also check for last and fresh current location via modern CurrentLocation API
+            // Check for last location via Fused Client
             fusedClient.lastLocation.addOnSuccessListener { loc ->
                 if (loc != null) {
                     processFreshLocation(loc, "fused_last")
@@ -179,6 +189,9 @@ class FreshLocationProvider(private val context: Context) {
                         processFreshLocation(loc, "fused_current")
                     }
                 }
+
+            // Also register native Android LocationManager as parallel high-reliability hardware listener
+            startLocationManagerFallback()
 
         } catch (e: SecurityException) {
             _locationState.value = _locationState.value.copy(

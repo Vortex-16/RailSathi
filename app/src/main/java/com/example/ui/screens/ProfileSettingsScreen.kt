@@ -448,34 +448,6 @@ fun ProfileSettingsScreen(
                             fontSize = 11.sp,
                             color = CharcoalTextMuted
                         )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Quick station selector for field testing / demonstration
-                        Text(
-                            text = "Quick Station Jump (Suburban Network):",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalTextMuted
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            listOf("SDAH", "DDJ", "BP", "NH", "CSMT").forEach { stnCode ->
-                                OutlinedButton(
-                                    onClick = { onSimulateStation(stnCode) },
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(32.dp),
-                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
-                                ) {
-                                    Text(stnCode, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
                     }
                 }
             }

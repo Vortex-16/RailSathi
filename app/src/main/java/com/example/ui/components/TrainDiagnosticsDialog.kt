@@ -117,46 +117,6 @@ fun TrainDiagnosticsDialog(
                         DiagRow("Current IST Time", diagnostics.currentIstTime.ifEmpty { "Syncing IST..." })
                     }
                 }
-
-                // Section 3: Upcoming Train Filter
-                item {
-                    DiagnosticsCard(title = "3. Train Suggestions & Filter", icon = Icons.Default.Train) {
-                        DiagRow("Active Candidates Count", "${diagnostics.upcomingTrainsCount} Upcoming Trains")
-                        DiagRow("Departed/Filtered Out", "${diagnostics.filteredDepartedTrains.size} Trains")
-
-                        if (diagnostics.upcomingTrains.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text("Upcoming Trains (Scheduled):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NatureGreen)
-                            diagnostics.upcomingTrains.take(4).forEach { train ->
-                                Text("• ${train.trainNumber} ${train.trainName} (Dep: ${train.departureTime}, ${train.platform})", fontSize = 11.sp, fontFamily = FontFamily.Monospace)
-                            }
-                        }
-
-                        if (diagnostics.filteredDepartedTrains.isNotEmpty()) {
-                            Spacer(modifier = Modifier.height(6.dp))
-                            Text("Filtered Departed Trains (Excluded):", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AlertRed)
-                            diagnostics.filteredDepartedTrains.take(4).forEach { item ->
-                                Text("• ${item.trainNumber} (Dep: ${item.departureTime}) -> ${item.reason}", fontSize = 11.sp, fontFamily = FontFamily.Monospace, color = CharcoalTextMuted)
-                            }
-                        }
-                    }
-                }
-
-                // Section 4: API Trace Logs
-                if (diagnostics.recentApiLogs.isNotEmpty()) {
-                    item {
-                        DiagnosticsCard(title = "4. Railway API Trace Logs", icon = Icons.Default.Info) {
-                            diagnostics.recentApiLogs.forEach { log ->
-                                Column(modifier = Modifier.padding(vertical = 3.dp)) {
-                                    Text("${log.endpoint} [HTTP ${log.httpStatus}]", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = if (log.httpStatus in 200..299) NatureGreen else AlertRed)
-                                    if (log.traceId != null) {
-                                        Text("TraceId: ${log.traceId}", fontSize = 10.sp, color = CharcoalTextMuted, fontFamily = FontFamily.Monospace)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
             }
         },
         confirmButton = {

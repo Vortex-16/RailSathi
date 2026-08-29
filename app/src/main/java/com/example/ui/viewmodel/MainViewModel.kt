@@ -9,6 +9,7 @@ import android.os.VibratorManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.AppConfig
+import com.example.data.auth.AuthManager
 import com.example.data.engine.TrainContextEngine
 import com.example.data.local.AppDatabase
 import com.example.data.local.AppPreferences
@@ -31,6 +32,7 @@ import com.example.data.repository.RailSathiRepository
 import com.example.data.repository.RailwayDataProvider
 import com.example.data.repository.TrainRouteDetails
 import com.example.ui.localization.LocalizationManager
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +43,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 enum class AppNavTab {
     HOME,
@@ -488,16 +491,33 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             trainContextEngine.endJourney()
             _activeRouteDetails.value = null
 
-            // 2. Clear Database
-            db.clearAllTables()
+            // 2. Stop GPS Tracking immediately
+            locationTracker.stopTracking()
 
-            // 3. Clear Preferences
-            prefs.clearAll()
+            // 3. Clear Database on IO dispatcher
+            withContext(Dispatchers.IO) {
+                try {
+                    db.clearAllTables()
+                } catch (_: Exception) {}
+            }
+
+            // 4. Sign out from CredentialManager
+            try {
+                AuthManager(getApplication()).signOut()
+            } catch (_: Exception) {}
+
+            // 5. Reset states
+            _searchQuery.value = ""
+            _searchedTrains.value = emptyList()
             _currentRole.value = UserRole.GUEST
+            _activeNavTab.value = AppNavTab.HOME
 
-            // 4. Return to Onboarding
+            // 6. Clear Preferences (this updates onboardingCompletedFlow to false)
+            prefs.clearAll()
+
+            // 7. Show feedback
             _alertBanner.value = "Logged out. All local data cleared."
-            delay(1500)
+            delay(1200)
             _alertBanner.value = null
         }
     }
