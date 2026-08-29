@@ -122,6 +122,26 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
         onProceed()
     }
 
+    // Proactively initialize location permission & tracking once onboarding is completed
+    LaunchedEffect(isOnboardingDone) {
+        if (isOnboardingDone) {
+            val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (hasFine || hasCoarse) {
+                viewModel.onLocationPermissionResult(true)
+            } else {
+                val permissionsToRequest = mutableListOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    permissionsToRequest.add(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                permissionLauncher.launch(permissionsToRequest.toTypedArray())
+            }
+        }
+    }
+
     val activeVendor = allVendors.find { it.vendorId == selectedVendorId } ?: allVendors.firstOrNull()
 
     if (!isOnboardingDone || isReplayingTutorial) {

@@ -232,6 +232,7 @@ object AuthenticEmuFormations {
 object IndianLocalRailwayDatabase {
     // Major Local Stations in West Bengal (Sealdah & Howrah Divisions) and major suburban lines
     val allStations = listOf(
+        // Eastern Railway & Kolkata Suburban
         RailwayStation("SDAH", "Sealdah", "सियालदह", "শিয়ালদহ", "Eastern Railway (Sealdah)", 22.5697, 88.3713, listOf("PF 1A", "PF 1B", "PF 2", "PF 3", "PF 4A", "PF 4B")),
         RailwayStation("DDJ", "Dum Dum Jn", "दमदम जंक्शन", "দমদম জংশন", "Eastern Railway (Sealdah)", 22.6222, 88.3934, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
         RailwayStation("BLH", "Belgharia", "बेलघरिया", "বেলঘরিয়া", "Eastern Railway (Sealdah)", 22.6617, 88.3846, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
@@ -251,18 +252,79 @@ object IndianLocalRailwayDatabase {
         RailwayStation("KNJ", "Krishnanagar City", "कृष्णनगर सिटी", "কৃষ্ণনগর সিটি", "Eastern Railway (Sealdah)", 23.4013, 88.4983, listOf("PF 1", "PF 2", "PF 3")),
         RailwayStation("BNJ", "Bongaon Jn", "बनगाँव जंक्शन", "বনগাঁ জংশন", "Eastern Railway (Sealdah)", 23.0450, 88.8250, listOf("PF 1", "PF 2", "PF 3")),
         RailwayStation("HWH", "Howrah Jn", "हावड़ा जंक्शन", "হাওড়া জংশন", "Eastern Railway (Howrah)", 22.5850, 88.3426, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7", "PF 8")),
+        RailwayStation("KOAA", "Kolkata Chitpur", "कोलकाता चितपुर", "কলকাতা চিৎপুর", "Eastern Railway (Sealdah)", 22.6022, 88.3735, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
         RailwayStation("BDC", "Bandel Jn", "बैंडेल जंक्शन", "ব্যান্ডেল জংশন", "Eastern Railway (Howrah)", 22.9234, 88.3789, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
         RailwayStation("BWN", "Barddhaman Jn", "बर्द्धमान जंक्शन", "বর্ধমান জংশন", "Eastern Railway (Howrah)", 23.2324, 87.8615, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
-        // Mumbai Suburban
-        RailwayStation("CSMT", "CSMT Mumbai", "सीएसएमटी मुंबई", "সিএসএমটি মুম্বাই", "Central Railway (Mumbai)", 18.9400, 72.8353, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
-        RailwayStation("TNA", "Thane", "ठाणे", "থানে", "Central Railway (Mumbai)", 19.1860, 72.9758, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
-        RailwayStation("KYN", "Kalyan Jn", "कल्याण जंक्शन", "কল্যাণ জংশন", "Central Railway (Mumbai)", 19.2437, 73.1355, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
-        // Chennai Suburban
+        RailwayStation("KGP", "Kharagpur Jn", "खड़गपुर जंक्शन", "খড়গপুর জংশন", "South Eastern Railway", 22.3297, 87.3213, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("ASN", "Asansol Jn", "आसनसोल जंक्शन", "আসানসোল জংশন", "Eastern Railway", 23.6889, 86.9661, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("DHN", "Dhanbad Jn", "धनबाद जंक्शन", "ধানবাদ জংশন", "East Central Railway", 23.7957, 86.4304, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
+        
+        // Bihar & East Central Railway
+        RailwayStation("PNBE", "Patna Jn", "पटना जंक्शन", "পাটনা জংশন", "East Central Railway (Danapur)", 25.6023, 85.1376, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7", "PF 8")),
+        RailwayStation("RJPB", "Rajendra Nagar", "राजेन्द्र नगर", "রাজেন্দ্র নগর", "East Central Railway (Danapur)", 25.5975, 85.1633, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
+        RailwayStation("DNR", "Danapur", "दानापुर", "দানাপুর", "East Central Railway (Danapur)", 25.6267, 85.0442, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("PPTA", "Patliputra Jn", "पाटलिपुत्र जंक्शन", "পাটলিপুত্র জংশন", "East Central Railway (Danapur)", 25.6375, 85.0934, listOf("PF 1", "PF 2", "PF 3")),
+        RailwayStation("ARA", "Ara Jn", "आरा जंक्शन", "আরা জংশন", "East Central Railway (Danapur)", 25.5562, 84.6644, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
+        RailwayStation("BXR", "Buxar", "बक्सर", "বক্সার", "East Central Railway (Danapur)", 25.5701, 83.9785, listOf("PF 1", "PF 2", "PF 3")),
+        RailwayStation("GAYA", "Gaya Jn", "गया जंक्शन", "গয়া জংশন", "East Central Railway", 24.8055, 84.9995, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+        RailwayStation("MFP", "Muzaffarpur Jn", "मुजफ्फरपुर जंक्शन", "মুজাফফরপুর জংশন", "East Central Railway", 26.1209, 85.3853, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
+        RailwayStation("DBG", "Darbhanga Jn", "दरभंगा जंक्शन", "দ্বারভাঙা জংশন", "East Central Railway", 26.1542, 85.8918, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
+        RailwayStation("SPJ", "Samastipur Jn", "समस्तीपुर जंक्शन", "সমস্তিপুর জংশন", "East Central Railway", 25.8628, 85.7811, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("BJU", "Barauni Jn", "बरौनी जंक्शन", "বড়ৌনি জংশন", "East Central Railway", 25.4746, 85.9863, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("KIR", "Katihar Jn", "कटिहार जंक्शन", "কাটিহার জংশন", "Northeast Frontier Railway", 25.5539, 87.5719, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+
+        // Uttar Pradesh & Northern / North Central Railway
+        RailwayStation("DDU", "Pt Deen Dayal Upadhyaya", "पंडित दीन दयाल उपाध्याय जं", "পণ্ডিত দীনদয়াল উপাধ্যায়", "East Central Railway", 25.2818, 83.1186, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("BSB", "Varanasi Jn", "वाराणसी जंक्शन", "বারাণসী জংশন", "Northern Railway (Lucknow)", 25.3283, 82.9868, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7", "PF 8")),
+        RailwayStation("PRYJ", "Prayagraj Jn (Allahabad)", "प्रयागराज जंक्शन", "প্রয়াগরাজ জংশন", "North Central Railway", 25.4484, 81.8286, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7", "PF 8")),
+        RailwayStation("CNB", "Kanpur Central", "कानपुर सेंट्रल", "কানপুর সেন্ট্রাল", "North Central Railway", 26.4547, 80.3507, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7", "PF 8", "PF 9", "PF 10")),
+        RailwayStation("LKO", "Lucknow Charbagh", "लखनऊ चारबाग", "লখনউ চারবাগ", "Northern Railway", 26.8322, 80.9192, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+        RailwayStation("LJN", "Lucknow Jn NER", "लखनऊ जंक्शन", "লখনউ জংশন", "North Eastern Railway", 26.8310, 80.9205, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("GKP", "Gorakhpur Jn", "गोरखपुर जंक्शन", "গোরখপুর জংশন", "North Eastern Railway", 26.7588, 83.3818, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+        RailwayStation("AYC", "Ayodhya Cantt", "अयोध्या कैंट", "অযোধ্যা ক্যান্টনমেন্ট", "Northern Railway", 26.7769, 82.1388, listOf("PF 1", "PF 2", "PF 3")),
+        RailwayStation("AGC", "Agra Cantt", "आगरा कैंट", "আগ্রা ক্যান্টনমেন্ট", "North Central Railway", 27.1578, 77.9904, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("MB", "Moradabad Jn", "मुरादाबाद जंक्शन", "মুরাদাবাদ জংশন", "Northern Railway", 28.8312, 78.7766, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+
+        // Delhi NCR
+        RailwayStation("NDLS", "New Delhi", "नई दिल्ली", "নতুন দিল্লি", "Northern Railway (Delhi)", 28.6430, 77.2195, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7", "PF 8", "PF 9", "PF 10", "PF 11", "PF 12", "PF 13", "PF 14", "PF 15", "PF 16")),
+        RailwayStation("DLI", "Old Delhi", "पुरानी दिल्ली", "পুরনো দিল্লি", "Northern Railway (Delhi)", 28.6606, 77.2285, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7", "PF 8")),
+        RailwayStation("NZM", "Hazrat Nizamuddin", "हज़रत निज़ामुद्दीन", "হজরত নিজামুদ্দিন", "Northern Railway (Delhi)", 28.5888, 77.2536, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("ANVT", "Anand Vihar Terminal", "आनंद विहार टर्मिनल", "আনন্দ বিহার টার্মিনাল", "Northern Railway (Delhi)", 28.6506, 77.3153, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("GZB", "Ghaziabad Jn", "गाजियाबाद जंक्शन", "গাজিয়াবাদ জংশন", "Northern Railway (Delhi)", 28.6678, 77.4287, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+        RailwayStation("DEC", "Delhi Cantt", "दिल्ली कैंट", "দিল্লি ক্যান্টনমেন্ট", "Northern Railway (Delhi)", 28.5912, 77.1264, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
+        RailwayStation("GGN", "Gurgaon", "गुरुग्राम", "গুরুগ্রাম", "Northern Railway (Delhi)", 28.4722, 77.0135, listOf("PF 1", "PF 2", "PF 3")),
+        RailwayStation("FDB", "Faridabad", "फरीदाबाद", "ফরিদাবাদ", "Northern Railway (Delhi)", 28.4069, 77.3149, listOf("PF 1", "PF 2", "PF 3")),
+
+        // Mumbai Suburban & Maharashtra
+        RailwayStation("CSMT", "CSMT Mumbai", "सीएसएमटी मुंबई", "সিএসএমটি মুম্বাই", "Central Railway (Mumbai)", 18.9400, 72.8353, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("DR", "Dadar", "दादर", "দাদার", "Central Railway (Mumbai)", 19.0178, 72.8437, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("BVI", "Borivali", "बोरीवली", "বোরিবলি", "Western Railway (Mumbai)", 19.2290, 72.8573, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("ADH", "Andheri", "अंधेरी", "অন্ধেরী", "Western Railway (Mumbai)", 19.1197, 72.8464, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("TNA", "Thane", "ठाणे", "থানে", "Central Railway (Mumbai)", 19.1860, 72.9758, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+        RailwayStation("KYN", "Kalyan Jn", "कल्याण जंक्शन", "কল্যাণ জংশন", "Central Railway (Mumbai)", 19.2437, 73.1355, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("PNVL", "Panvel Jn", "पनवेल जंक्शन", "পানভেল জংশন", "Central Railway (Mumbai)", 18.9886, 73.1118, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("PUNE", "Pune Jn", "पुणे जंक्शन", "পুনে জংশন", "Central Railway (Pune)", 18.5284, 73.8739, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+        RailwayStation("NGP", "Nagpur Jn", "नागपुर जंक्शन", "নাগপুর জংশন", "Central Railway", 21.1524, 79.0888, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+
+        // Gujarat & Rajasthan
+        RailwayStation("ADI", "Ahmedabad Jn", "अहमदाबाद जंक्शन", "আহমেদাবাদ জংশন", "Western Railway", 23.0238, 72.6006, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("ST", "Surat", "सूरत", "সুরাট", "Western Railway", 21.2049, 72.8407, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
+        RailwayStation("BRC", "Vadodara Jn", "वडोदरा जंक्शन", "ভাদোদরা জংশন", "Western Railway", 22.3106, 73.1812, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("JP", "Jaipur Jn", "जयपुर जंक्शन", "জয়পুর জংশন", "North Western Railway", 26.9196, 75.7878, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+
+        // South India
+        RailwayStation("MAS", "Chennai Central", "चेन्नई सेंट्रल", "চেন্নাই সেন্ট্রাল", "Southern Railway (Chennai)", 13.0827, 80.2755, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("MS", "Chennai Egmore", "चेन्नई एग्मोर", "চেন্নাই এগমোর", "Southern Railway (Chennai)", 13.0784, 80.2612, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
         RailwayStation("MSB", "Chennai Beach", "चेन्नई बीच", "চেন্নাই বিচ", "Southern Railway (Chennai)", 13.0931, 80.2929, listOf("PF 1", "PF 2", "PF 3")),
         RailwayStation("TBM", "Tambaram", "तांबरम", "তাম্বরম", "Southern Railway (Chennai)", 12.9249, 80.1280, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
-        // Delhi NCR
-        RailwayStation("NDLS", "New Delhi", "नई दिल्ली", "নতুন দিল্লি", "Northern Railway (Delhi)", 28.6430, 77.2195, listOf("PF 1", "PF 2", "PF 3", "PF 4")),
-        RailwayStation("GZB", "Ghaziabad Jn", "गाजियाबाद जंक्शन", "গাজিয়াবাদ জংশন", "Northern Railway (Delhi)", 28.6678, 77.4287, listOf("PF 1", "PF 2", "PF 3", "PF 4"))
+        RailwayStation("SBC", "KSR Bengaluru City", "केएसआर बेंगलुरु सिटी", "কেএসআর বেঙ্গালুরু", "South Western Railway", 12.9781, 77.5696, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7")),
+        RailwayStation("YPR", "Yesvantpur Jn", "यशवंतपुर जंक्शन", "যশবন্তপুর জংশন", "South Western Railway", 13.0238, 77.5503, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+        RailwayStation("SC", "Secunderabad Jn", "सिकंदराबाद जंक्शन", "সেকেন্দ্রাবাদ জংশন", "South Central Railway", 17.4344, 78.5015, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6", "PF 7", "PF 8")),
+        RailwayStation("HYB", "Hyderabad Deccan", "हैदराबाद दक्कन", "হায়দরাবাদ ডেকান", "South Central Railway", 17.3923, 78.4682, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("KCG", "Kacheguda", "काचीगुड़ा", "কাচেগুড়া", "South Central Railway", 17.3876, 78.4984, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5")),
+        RailwayStation("BBS", "Bhubaneswar", "भुवनेश्वर", "ভুবনেশ্বর", "East Coast Railway", 20.2666, 85.8436, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+        RailwayStation("GHY", "Guwahati", "गुवाहाटी", "গুয়াহাটি", "Northeast Frontier Railway", 26.1827, 91.7508, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6")),
+        RailwayStation("BPL", "Bhopal Jn", "भोपाल जंक्शन", "ভোপাল জংশন", "West Central Railway", 23.2662, 77.4144, listOf("PF 1", "PF 2", "PF 3", "PF 4", "PF 5", "PF 6"))
     )
 
     val allSchedules = listOf(

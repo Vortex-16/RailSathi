@@ -373,7 +373,7 @@ fun ProfileSettingsScreen(
                                 color = CharcoalTextMuted
                             )
                             Text(
-                                text = "Phone: ${user?.phone ?: "9876543210"}",
+                                text = "Contact / ID: ${user?.phone ?: "9876543210"}",
                                 fontSize = 12.sp,
                                 color = CharcoalTextMuted
                             )
@@ -423,10 +423,18 @@ fun ProfileSettingsScreen(
 
                         Spacer(modifier = Modifier.height(8.dp))
 
-                        val stationStatusText = if (locationInfo?.isNearStation == true && locationInfo.nearestStation != null) {
-                            "📍 Detected Near: ${locationInfo.nearestStation.nameEn} (${locationInfo.nearestStation.code}) • ${(locationInfo.distanceToStationKm * 1000).toInt()}m away"
-                        } else {
-                            "🏠 Off-train location (~${String.format(java.util.Locale.US, "%.1f", locationInfo?.distanceToStationKm ?: 0.0)} km from nearest station)"
+                        val distKm = locationInfo?.distanceToStationKm ?: 0.0
+                        val stationStatusText = when {
+                            locationInfo?.isNearStation == true && locationInfo.nearestStation != null -> {
+                                val meters = (distKm * 1000).toInt().coerceAtLeast(10)
+                                "📍 Detected Near: ${locationInfo.nearestStation.nameEn} (${locationInfo.nearestStation.code}) • ${meters}m away"
+                            }
+                            locationInfo?.nearestStation != null && distKm in 0.1..30.0 -> {
+                                "🏠 Off-train (~${String.format(java.util.Locale.US, "%.1f", distKm)} km from ${locationInfo.nearestStation.nameEn})"
+                            }
+                            else -> {
+                                "🏠 Off-train (Suburban Radar Standby)"
+                            }
                         }
 
                         Text(

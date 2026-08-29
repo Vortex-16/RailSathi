@@ -37,9 +37,12 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -502,6 +505,11 @@ private fun Screen3AuthAndRole(
     val scope = rememberCoroutineScope()
     val authManager = remember { AuthManager(context) }
 
+    var customNameInput by remember { mutableStateOf("") }
+    var customEmailInput by remember { mutableStateOf("") }
+    var isSigningInState by remember { mutableStateOf(false) }
+    var authErrorMessage by remember { mutableStateOf<String?>(null) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -560,7 +568,7 @@ private fun Screen3AuthAndRole(
             )
         }
 
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         // Authentication Block
         Card(
@@ -577,7 +585,7 @@ private fun Screen3AuthAndRole(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Sign in with Google OAuth to link your session & sync data with cloud database",
+                    text = "Sign in to securely link your profile & sync your suburban train preferences",
                     fontSize = 13.sp,
                     color = CharcoalTextMuted,
                     textAlign = TextAlign.Center
@@ -586,21 +594,26 @@ private fun Screen3AuthAndRole(
                 // Google Sign In Primary Button
                 Button(
                     onClick = {
+                        isSigningInState = true
+                        authErrorMessage = null
                         scope.launch {
-                            val result = authManager.signInWithGoogle(context)
-                            if (result.success && !result.email.isNullOrBlank()) {
-                                onGoogleSignIn(
-                                    result.email,
-                                    result.displayName,
-                                    result.idToken,
-                                    result.googleId,
-                                    result.photoUrl
-                                )
-                            } else {
-                                // Graceful fallback for local development/emulator without Google Play accounts
-                                val fallbackEmail = if (selectedRole == UserRole.VENDOR) "vendor.demo@railsaathi.in" else "commuter.demo@railsaathi.in"
-                                val fallbackName = if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter"
-                                onGoogleSignIn(fallbackEmail, fallbackName, result.idToken, result.googleId ?: "google_oauth_usr", result.photoUrl)
+                            try {
+                                val result = authManager.signInWithGoogle(context)
+                                if (result.success && !result.email.isNullOrBlank()) {
+                                    onGoogleSignIn(
+                                        result.email,
+                                        result.displayName,
+                                        result.idToken,
+                                        result.googleId,
+                                        result.photoUrl
+                                    )
+                                } else {
+                                    authErrorMessage = result.errorMessage ?: "Google Sign-In unavailable. Enter details below to continue."
+                                }
+                            } catch (e: Exception) {
+                                authErrorMessage = "Sign-in error: ${e.message}"
+                            } finally {
+                                isSigningInState = false
                             }
                         }
                     },
@@ -610,14 +623,14 @@ private fun Screen3AuthAndRole(
                         .testTag("onboarding_google_signin_button"),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
-                    enabled = !isSigningIn
+                    enabled = !isSigningInState
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         Text(
-                            text = if (isSigningIn) "Authenticating..." else "Continue with Google",
+                            text = if (isSigningInState) "Connecting to Google..." else "Sign in with Google",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.White
@@ -625,10 +638,102 @@ private fun Screen3AuthAndRole(
                     }
                 }
 
+                if (authErrorMessage != null) {
+                    Text(
+                        text = authErrorMessage ?: "",
+                        fontSize = 12.sp,
+                        color = TerracottaAmber,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 4.dp)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = WarmBorder)
+                    Text(
+                        text = " OR ENTER DETAILS ",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CharcoalTextMuted,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = WarmBorder)
+                }
+
+                // Custom Name Input
+                OutlinedTextField(
+                    value = customNameInput,
+                    onValueChange = { customNameInput = it },
+                    label = { Text("Your Full Name") },
+                    placeholder = { Text(if (selectedRole == UserRole.VENDOR) "e.g. Ramesh Kumar" else "e.g. Amit Sen") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = CharcoalText,
+                        unfocusedTextColor = CharcoalText,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = RailNavy,
+                        focusedBorderColor = RailNavy,
+                        unfocusedBorderColor = WarmBorder
+                    )
+                )
+
+                // Custom Email/Phone Input
+                OutlinedTextField(
+                    value = customEmailInput,
+                    onValueChange = { customEmailInput = it },
+                    label = { Text("Email or Mobile Number") },
+                    placeholder = { Text("e.g. yourname@gmail.com") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = CharcoalText,
+                        unfocusedTextColor = CharcoalText,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = RailNavy,
+                        focusedBorderColor = RailNavy,
+                        unfocusedBorderColor = WarmBorder
+                    )
+                )
+
+                // Sign In with details button
+                if (customNameInput.isNotBlank() || customEmailInput.isNotBlank()) {
+                    Button(
+                        onClick = {
+                            val cleanName = customNameInput.trim().ifBlank { if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter" }
+                            val cleanEmail = customEmailInput.trim().ifBlank { null }
+                            val genId = "usr_${System.currentTimeMillis()}"
+                            onGoogleSignIn(cleanEmail, cleanName, "token_direct", genId, null)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = TerracottaAmber)
+                    ) {
+                        Text(
+                            text = "Continue with My Details",
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+
                 // Quick Guest Commuter option
                 OutlinedButton(
                     onClick = {
-                        onGoogleSignIn(null, if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter", null, null, null)
+                        val defaultTitle = if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter"
+                        onGoogleSignIn(null, defaultTitle, null, null, null)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
