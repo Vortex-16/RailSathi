@@ -211,10 +211,23 @@ class RailSathiRepository(
         val validQty = quantity.coerceIn(1, AppConfig.MAX_ITEM_QUANTITY)
 
         val coachVendors = db.vendorDao().getVendorsInCoach(trainNumber, coachNumber)
-        val eligibleVendors = if (coachVendors.isNotEmpty()) {
-            coachVendors.filter { it.specialityItemId == foodItem.id || it.isOnline }
-        } else {
-            emptyList()
+        val trainVendors = db.vendorDao().getVendorsInTrain(trainNumber)
+
+        // Prioritize:
+        // 1. Online vendors in this coach specializing in this item
+        // 2. Online vendors on this train specializing in this item
+        // 3. Online vendors in this coach
+        // 4. Any online vendor on this train
+        val eligibleVendors = when {
+            coachVendors.any { it.specialityItemId == foodItem.id && it.isOnline } ->
+                coachVendors.filter { it.specialityItemId == foodItem.id && it.isOnline }
+            trainVendors.any { it.specialityItemId == foodItem.id && it.isOnline } ->
+                trainVendors.filter { it.specialityItemId == foodItem.id && it.isOnline }
+            coachVendors.any { it.isOnline } ->
+                coachVendors.filter { it.isOnline }
+            trainVendors.any { it.isOnline } ->
+                trainVendors.filter { it.isOnline }
+            else -> emptyList()
         }
 
         // Fair income score
@@ -399,13 +412,21 @@ class RailSathiRepository(
         }
     }
 
-    private fun findBestAlternativeCoach(
+    private suspend fun findBestAlternativeCoach(
         trainNumber: String,
         specialityItemId: String,
         occupiedCoach: String
     ): String {
-        val coaches = listOf("VND-1", "GS-1", "GS-2", "GS-3", "VND-2")
-        return coaches.firstOrNull { it != occupiedCoach } ?: "VND-2"
+        val standardCoaches = listOf("VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-1", "LD-2")
+        val trainVendors = vendorDao.getVendorsInTrain(trainNumber)
+        val occupiedBySameItem = trainVendors
+            .filter { it.specialityItemId == specialityItemId }
+            .map { it.currentCoach }
+            .toSet()
+
+        return standardCoaches.firstOrNull { coach ->
+            coach != occupiedCoach && !occupiedBySameItem.contains(coach)
+        } ?: standardCoaches.firstOrNull { it != occupiedCoach } ?: "VND-2"
     }
 
     suspend fun updateVendorCoach(vendorId: String, coachNumber: String) = withContext(Dispatchers.IO) {

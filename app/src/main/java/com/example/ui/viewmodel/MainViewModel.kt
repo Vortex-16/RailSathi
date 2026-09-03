@@ -202,7 +202,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 if (currentSession != null && currentRoute != null) {
                     if (_activeStationEta.value > 0) {
                         _activeStationEta.value -= 1
-                    } else {
+                    } else if (currentRoute.stations.isNotEmpty()) {
                         val nextIdx = (currentRoute.currentStationIndex + 1) % currentRoute.stations.size
                         _activeRouteDetails.value = currentRoute.copy(currentStationIndex = nextIdx)
                         _activeStationEta.value = 45

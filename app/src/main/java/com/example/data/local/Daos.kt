@@ -114,6 +114,12 @@ interface VendorDao {
     @Query("SELECT * FROM vendors WHERE currentTrain = :trainNumber AND currentCoach = :coachNumber")
     suspend fun getVendorsInCoach(trainNumber: String, coachNumber: String): List<VendorEntity>
 
+    @Query("SELECT * FROM vendors WHERE currentTrain = :trainNumber")
+    suspend fun getVendorsInTrain(trainNumber: String): List<VendorEntity>
+
+    @Query("SELECT * FROM vendors")
+    suspend fun getAllVendorsDirect(): List<VendorEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertVendor(vendor: VendorEntity)
 

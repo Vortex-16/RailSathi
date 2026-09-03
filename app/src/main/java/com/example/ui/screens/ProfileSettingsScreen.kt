@@ -82,7 +82,7 @@ fun ProfileSettingsScreen(
     selectedRoute: TrainRouteDetails?,
     availableRoutes: List<TrainRouteDetails>,
     locationInfo: UserLocationInfo? = null,
-    onSwitchRole: (UserRole) -> Unit,
+    onSwitchRole: (UserRole) -> Unit = {},
     onLanguageChange: (IndianLanguage) -> Unit,
     onToggleSeniorMode: (Boolean) -> Unit,
     onRouteChange: (TrainRouteDetails) -> Unit,
@@ -96,7 +96,6 @@ fun ProfileSettingsScreen(
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showEditProfileDialog by remember { mutableStateOf(false) }
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
-    var pendingRoleToSwitch by remember { mutableStateOf<UserRole?>(null) }
     var selectedLanguageCandidate by remember { mutableStateOf(language) }
 
     var editName by remember(user) { mutableStateOf(user?.name ?: "") }
@@ -207,48 +206,6 @@ fun ProfileSettingsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showLogoutConfirmDialog = false }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-
-    // Role Switch Confirmation Dialog
-    if (pendingRoleToSwitch != null) {
-        val targetRole = pendingRoleToSwitch!!
-        AlertDialog(
-            onDismissRequest = { pendingRoleToSwitch = null },
-            title = {
-                Text(
-                    text = "Confirm Role Switch",
-                    fontWeight = FontWeight.Bold,
-                    color = RailNavy
-                )
-            },
-            text = {
-                Text(
-                    text = when (targetRole) {
-                        UserRole.VENDOR -> "Are you sure you want to switch to Vendor Mode? This enables the Vendor Radar, coach collision safety check, and live Hunger Signal orders."
-                        UserRole.TRAVELER -> "Switch to Passenger / Traveler Mode? This allows you to broadcast Hunger Signals to nearby licensed train vendors."
-                        UserRole.GUEST -> "Switch to Guest Mode? You can browse routes and coach formations as a visitor."
-                    },
-                    fontSize = 14.sp,
-                    color = CharcoalText
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        onSwitchRole(targetRole)
-                        pendingRoleToSwitch = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = RailNavy)
-                ) {
-                    Text("Confirm Switch")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingRoleToSwitch = null }) {
                     Text("Cancel")
                 }
             }
@@ -448,100 +405,6 @@ fun ProfileSettingsScreen(
                             fontSize = 11.sp,
                             color = CharcoalTextMuted
                         )
-                    }
-                }
-            }
-
-            // Role Switcher Card with Safety Confirmation
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Switch Active App Role",
-                            fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText
-                        )
-                        Text(
-                            text = "Tap a role to request confirmation dialog before changing.",
-                            fontSize = 11.sp,
-                            color = CharcoalTextMuted
-                        )
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Button(
-                                onClick = {
-                                    if (role != UserRole.TRAVELER) {
-                                        pendingRoleToSwitch = UserRole.TRAVELER
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (role == UserRole.TRAVELER) RailNavy else Color(0xFFF1F5F9)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("switch_traveler_btn")
-                            ) {
-                                Text(
-                                    text = "Passenger",
-                                    color = if (role == UserRole.TRAVELER) Color.White else CharcoalText,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            Button(
-                                onClick = {
-                                    if (role != UserRole.VENDOR) {
-                                        pendingRoleToSwitch = UserRole.VENDOR
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (role == UserRole.VENDOR) TerracottaAmber else Color(0xFFF1F5F9)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .testTag("switch_vendor_btn")
-                            ) {
-                                Text(
-                                    text = "Vendor",
-                                    color = if (role == UserRole.VENDOR) Color.White else CharcoalText,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            Button(
-                                onClick = {
-                                    if (role != UserRole.GUEST) {
-                                        pendingRoleToSwitch = UserRole.GUEST
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (role == UserRole.GUEST) CharcoalText else Color(0xFFF1F5F9)
-                                ),
-                                shape = RoundedCornerShape(8.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text(
-                                    text = "Guest",
-                                    color = if (role == UserRole.GUEST) Color.White else CharcoalText,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
                     }
                 }
             }

@@ -210,11 +210,11 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 },
                                 onStartShift = { candidate, coach ->
                                     checkAndRequestLocationPermission {
-                                        viewModel.startJourney(candidate, coach)
+                                        viewModel.vendorStartShift(candidate, coach)
                                     }
                                 },
                                 onEndShift = {
-                                    viewModel.endJourney()
+                                    viewModel.vendorEndShift()
                                 },
                                 onAcceptAndOfferPrice = { req, v, price ->
                                     viewModel.vendorAcceptAndOfferPrice(req.id, price)
