@@ -130,7 +130,10 @@ fun TravelerHomeScreen(
     onSendHungerSignal: (FoodItem, String) -> Unit,
     onConfirmOrder: (Long) -> Unit,
     onCancelRequest: (Long) -> Unit,
-    onSimulateStation: (String) -> Unit = {}
+    onSimulateStation: (String) -> Unit = {},
+    userTravelStatus: com.example.data.location.UserTravelStatus = com.example.data.location.UserTravelStatus.STATIONARY,
+    locationManagerState: com.example.data.location.LocationManagerState = com.example.data.location.LocationManagerState(),
+    onToggleActiveTravel: () -> Unit = {}
 ) {
     var seatLocationText by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
@@ -238,6 +241,71 @@ fun TravelerHomeScreen(
                                 fontSize = if (isSeniorMode) 14.sp else 12.sp,
                                 color = CharcoalTextMuted
                             )
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Battery-saving GPS policy status & trigger toggle
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (locationManagerState.isTrackingGps) Color(0xFFF0FDF4) else Color(0xFFF8FAFC),
+                                border = BorderStroke(1.dp, if (locationManagerState.isTrackingGps) Color(0xFFBBF7D0) else Color(0xFFE2E8F0)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(8.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        when (locationManagerState.serviceState) {
+                                                            com.example.data.location.LocationServiceState.ACTIVE -> NatureGreen
+                                                            com.example.data.location.LocationServiceState.PAUSED_BACKGROUND -> Color(0xFFF59E0B)
+                                                            else -> Color(0xFF94A3B8)
+                                                        }
+                                                    )
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = if (userTravelStatus == com.example.data.location.UserTravelStatus.ACTIVE_TRAVEL) {
+                                                    "Active Travel Mode • GPS Tracking"
+                                                } else {
+                                                    "Stationary Mode • GPS Paused"
+                                                },
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = CharcoalText
+                                            )
+                                        }
+                                        Text(
+                                            text = locationManagerState.statusMessage,
+                                            fontSize = 11.sp,
+                                            color = CharcoalTextMuted,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+
+                                    TextButton(
+                                        onClick = onToggleActiveTravel,
+                                        modifier = Modifier.testTag("toggle_active_travel_mode_btn")
+                                    ) {
+                                        Text(
+                                            text = if (userTravelStatus == com.example.data.location.UserTravelStatus.ACTIVE_TRAVEL) "Pause GPS" else "Start Travel",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (userTravelStatus == com.example.data.location.UserTravelStatus.ACTIVE_TRAVEL) AlertRed else RailNavy
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }

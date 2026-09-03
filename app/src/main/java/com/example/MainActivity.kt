@@ -91,6 +91,29 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
     val foodHintShown by viewModel.foodHintShown.collectAsState()
     val requestHintShown by viewModel.requestHintShown.collectAsState()
     val vendorHintShown by viewModel.vendorHintShown.collectAsState()
+    val locationManagerState by viewModel.locationManagerState.collectAsState()
+    val userTravelStatus by viewModel.userTravelStatus.collectAsState()
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_START,
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
+                    viewModel.setAppForeground(true)
+                }
+                androidx.lifecycle.Lifecycle.Event.ON_STOP,
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
+                    viewModel.setAppForeground(false)
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
 
@@ -280,7 +303,10 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 onCancelRequest = { viewModel.customerCancelOrder(it) },
                                 onSimulateStation = { stationCode ->
                                     viewModel.simulateAtStation(stationCode)
-                                }
+                                },
+                                userTravelStatus = userTravelStatus,
+                                locationManagerState = locationManagerState,
+                                onToggleActiveTravel = { viewModel.toggleActiveTravel() }
                             )
                         }
                     }

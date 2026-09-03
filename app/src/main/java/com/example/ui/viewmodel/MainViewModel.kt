@@ -16,11 +16,15 @@ import com.example.data.local.AppPreferences
 import com.example.data.local.FoodRequestEntity
 import com.example.data.local.UserEntity
 import com.example.data.local.VendorEntity
+import com.example.data.location.LocationManagerState
+import com.example.data.location.LocationServiceState
 import com.example.data.location.TrainLocationTracker
 import com.example.data.location.UserLocationInfo
+import com.example.data.location.UserTravelStatus
 import com.example.data.model.FoodItem
 import com.example.data.model.IndianLanguage
 import com.example.data.model.JourneySession
+import com.example.data.model.JourneyStatus
 import com.example.data.model.RailwayStation
 import com.example.data.model.RegularCommuteSchedule
 import com.example.data.model.TrainCandidate
@@ -71,6 +75,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     val isSeniorMode: StateFlow<Boolean> = prefs.seniorModeFlow
     val isOnboardingDone: StateFlow<Boolean> = prefs.onboardingCompletedFlow
     val locationState: StateFlow<UserLocationInfo> = locationTracker.locationState
+    val locationStateManager = locationTracker.locationStateManager
+    val locationManagerState: StateFlow<LocationManagerState> = locationTracker.managerState
+    val userTravelStatus: StateFlow<UserTravelStatus> = locationTracker.userTravelStatus
+    val isForeground: StateFlow<Boolean> = locationTracker.isForeground
 
     // Contextual Hints State Flows
     val journeyHintShown: StateFlow<Boolean> = prefs.journeyHintShownFlow
@@ -181,14 +189,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     init {
         viewModelScope.launch {
             activeJourneySession.collect { session ->
-                if (session != null) {
+                if (session != null && session.status == JourneyStatus.ACTIVE) {
                     val route = repository.availableRoutes.find { it.trainNumber == session.trainNumber }
                     if (route != null) {
                         _activeRouteDetails.value = route
                         _selectedCoach.value = session.currentCoach
                     }
+                    setUserTravelStatus(UserTravelStatus.ACTIVE_TRAVEL)
                 } else {
                     _activeRouteDetails.value = null
+                    setUserTravelStatus(prefs.getSavedTravelStatus())
                 }
             }
         }
@@ -215,6 +225,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun onLocationPermissionResult(granted: Boolean) {
         locationTracker.updatePermissionStatus(granted)
+    }
+
+    fun setAppForeground(isForeground: Boolean) {
+        locationTracker.setAppForeground(isForeground)
+    }
+
+    fun setUserTravelStatus(status: UserTravelStatus) {
+        locationTracker.setUserTravelStatus(status)
+        prefs.saveTravelStatus(status)
+    }
+
+    fun toggleActiveTravel() {
+        locationTracker.toggleActiveTravel()
+        prefs.saveTravelStatus(locationTracker.userTravelStatus.value)
+    }
+
+    fun toggleLocationServices(enabled: Boolean? = null) {
+        locationTracker.toggleLocationServices(enabled)
+        prefs.saveLocationServicesEnabled(locationTracker.managerState.value.isServicesEnabled)
     }
 
     fun simulateAtStation(stationCode: String) {
@@ -308,6 +337,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun startJourney(candidate: TrainCandidate, coach: String = "GS-2") {
         _selectedCoach.value = coach
         val userId = activeUser.value?.userId ?: "traveler_1"
+        setUserTravelStatus(UserTravelStatus.ACTIVE_TRAVEL)
         trainContextEngine.startJourney(candidate, userId, coach)
         triggerHapticNotification()
         _alertBanner.value = "Journey Started: ${candidate.trainName} ($coach)"
@@ -336,6 +366,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun endActiveJourney() {
+        setUserTravelStatus(UserTravelStatus.STATIONARY)
         trainContextEngine.endJourney()
         _activeRouteDetails.value = null
         triggerHapticNotification()
@@ -351,6 +382,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun cancelActiveJourney() {
+        setUserTravelStatus(UserTravelStatus.STATIONARY)
         trainContextEngine.cancelJourney()
         _activeRouteDetails.value = null
         triggerHapticNotification()
@@ -364,6 +396,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun vendorStartShift(candidate: TrainCandidate, coach: String = "VND-1") {
         _selectedCoach.value = coach
         val userId = activeUser.value?.userId ?: "vendor_1"
+        setUserTravelStatus(UserTravelStatus.ACTIVE_TRAVEL)
         trainContextEngine.startJourney(candidate, userId, coach)
         viewModelScope.launch {
             repository.updateVendorCoach(selectedVendorId.value, coach)
@@ -377,6 +410,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun vendorEndShift() {
+        setUserTravelStatus(UserTravelStatus.STATIONARY)
         trainContextEngine.endJourney()
         _activeRouteDetails.value = null
         triggerHapticNotification()

@@ -91,6 +91,19 @@ fun TrainDiagnosticsDialog(
                     .heightIn(max = 480.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // Section 0: LocationState Manager & GPS Restriction Policy
+                item {
+                    DiagnosticsCard(title = "0. LocationState Manager (Battery Policy)", icon = Icons.Default.GpsFixed) {
+                        val mgr = diagnostics.locationManagerState
+                        DiagRow("Foreground Status", if (mgr.isAppInForeground) "Foreground (Active)" else "Background (Restricted)", isGood = mgr.isAppInForeground)
+                        DiagRow("User Travel Status", mgr.userTravelStatus.name, isGood = mgr.userTravelStatus == com.example.data.location.UserTravelStatus.ACTIVE_TRAVEL)
+                        DiagRow("Location Service Toggle", if (mgr.isServicesEnabled) "Enabled (Master ON)" else "Disabled (Master OFF)", isGood = mgr.isServicesEnabled)
+                        DiagRow("Runtime Permission", if (mgr.hasPermission) "Granted" else "Missing / Denied", isGood = mgr.hasPermission)
+                        DiagRow("GPS Service State", mgr.serviceState.name, isGood = mgr.serviceState == com.example.data.location.LocationServiceState.ACTIVE)
+                        DiagRow("Policy Decision", mgr.statusMessage)
+                    }
+                }
+
                 // Section 1: Location Engine & GPS Metrics
                 item {
                     DiagnosticsCard(title = "1. Location Engine State", icon = Icons.Default.GpsFixed) {

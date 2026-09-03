@@ -1,30 +1,62 @@
 package com.example.data.location
 
 import android.content.Context
-import com.example.data.model.LocationDiagnosticsInfo
+import androidx.lifecycle.LifecycleOwner
 import com.example.data.model.RailwayStation
 import com.example.data.model.StationConfidence
 import kotlinx.coroutines.flow.StateFlow
 
-class TrainLocationTracker(context: Context) {
+class TrainLocationTracker(
+    context: Context,
+    val freshLocationProvider: FreshLocationProvider = FreshLocationProvider(context)
+) {
+    val locationStateManager = LocationStateManager(
+        locationProvider = freshLocationProvider,
+        initialForeground = true,
+        initialTravelStatus = UserTravelStatus.STATIONARY,
+        initialPermission = false,
+        initialServicesEnabled = true
+    )
 
-    val freshLocationProvider = FreshLocationProvider(context)
     val locationState: StateFlow<UserLocationInfo> = freshLocationProvider.locationState
+    val managerState: StateFlow<LocationManagerState> = locationStateManager.managerState
+    val userTravelStatus: StateFlow<UserTravelStatus> = locationStateManager.userTravelStatus
+    val isForeground: StateFlow<Boolean> = locationStateManager.isForeground
+
+    fun attachLifecycle(lifecycleOwner: LifecycleOwner) {
+        locationStateManager.attachLifecycle(lifecycleOwner)
+    }
 
     fun updatePermissionStatus(granted: Boolean) {
-        freshLocationProvider.updatePermissionStatus(fineGranted = granted, coarseGranted = granted)
+        locationStateManager.updatePermissionStatus(fineGranted = granted, coarseGranted = granted)
     }
 
     fun updatePermissionStatus(fineGranted: Boolean, coarseGranted: Boolean) {
-        freshLocationProvider.updatePermissionStatus(fineGranted = fineGranted, coarseGranted = coarseGranted)
+        locationStateManager.updatePermissionStatus(fineGranted = fineGranted, coarseGranted = coarseGranted)
+    }
+
+    fun setAppForeground(isForeground: Boolean) {
+        locationStateManager.setAppForeground(isForeground)
+    }
+
+    fun setUserTravelStatus(status: UserTravelStatus) {
+        locationStateManager.setUserTravelStatus(status)
+    }
+
+    fun toggleActiveTravel() {
+        locationStateManager.toggleUserTravelStatus()
+    }
+
+    fun toggleLocationServices(enabled: Boolean? = null) {
+        locationStateManager.toggleLocationServices(enabled)
     }
 
     fun startTracking() {
-        freshLocationProvider.startTracking()
+        locationStateManager.startTracking()
     }
 
     fun stopTracking() {
-        freshLocationProvider.stopTracking()
+        locationStateManager.stopTracking()
     }
 
     fun setManualSimulationLocation(stationCode: String) {

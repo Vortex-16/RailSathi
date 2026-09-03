@@ -22,11 +22,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import com.example.data.location.LocationManagerState
 import kotlinx.coroutines.launch
 import java.util.UUID
 
 data class TrainDiagnosticsSnapshot(
     val locationDiagnostics: LocationDiagnosticsInfo,
+    val locationManagerState: LocationManagerState = LocationManagerState(),
     val detectedStation: RailwayStation?,
     val stationConfidence: StationConfidence,
     val stationDistanceMeters: Double,
@@ -312,6 +314,7 @@ class TrainContextEngine(
         val nearest = _nearbyStation.value
         return TrainDiagnosticsSnapshot(
             locationDiagnostics = loc.diagnostics,
+            locationManagerState = locationTracker.managerState.value,
             detectedStation = nearest,
             stationConfidence = _stationConfidence.value,
             stationDistanceMeters = loc.distanceToStationKm * 1000.0,

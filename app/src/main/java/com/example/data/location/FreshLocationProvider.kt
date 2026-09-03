@@ -50,7 +50,7 @@ data class UserLocationInfo(
     val diagnostics: LocationDiagnosticsInfo = LocationDiagnosticsInfo()
 )
 
-class FreshLocationProvider(private val context: Context) {
+class FreshLocationProvider(private val context: Context) : LocationProviderDelegate {
 
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
     private val fusedClient: FusedLocationProviderClient by lazy {
@@ -129,24 +129,23 @@ class FreshLocationProvider(private val context: Context) {
         override fun onProviderDisabled(provider: String) {}
     }
 
-    fun updatePermissionStatus(fineGranted: Boolean, coarseGranted: Boolean) {
+    override fun updatePermissionStatus(fineGranted: Boolean, coarseGranted: Boolean) {
         val hasPerm = fineGranted || coarseGranted
         _locationState.value = _locationState.value.copy(
             hasPermission = hasPerm,
             isFinePermission = fineGranted,
-            statusMessage = if (hasPerm) "GPS Active" else "Location permission required"
+            statusMessage = if (hasPerm) "Permission Granted (Standby)" else "Location permission required"
         )
-        if (hasPerm) {
-            startTracking()
-        } else {
-            stopTracking()
-        }
     }
 
     @SuppressLint("MissingPermission")
-    fun startTracking() {
+    override fun startTracking() {
         if (isTracking) return
         isTracking = true
+        _locationState.value = _locationState.value.copy(
+            isGpsActive = true,
+            statusMessage = "GPS Active (Acquiring...)"
+        )
 
         try {
             // Check immediately for any cached system location across all providers
@@ -227,7 +226,7 @@ class FreshLocationProvider(private val context: Context) {
         }
     }
 
-    fun stopTracking() {
+    override fun stopTracking(reason: String) {
         isTracking = false
         try {
             fusedClient.removeLocationUpdates(fusedLocationCallback)
@@ -235,6 +234,18 @@ class FreshLocationProvider(private val context: Context) {
         try {
             locationManager?.removeUpdates(fallbackLocationListener)
         } catch (_: Exception) {}
+        _locationState.value = _locationState.value.copy(
+            isGpsActive = false,
+            statusMessage = reason
+        )
+    }
+
+    fun stopTracking() {
+        stopTracking("GPS Paused")
+    }
+
+    override fun updateStatusMessage(message: String) {
+        _locationState.value = _locationState.value.copy(statusMessage = message)
     }
 
     fun processFreshLocation(location: Location, providerTag: String) {

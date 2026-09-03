@@ -115,6 +115,27 @@ class AppPreferences(context: Context) {
         _seniorModeFlow.value = enabled
     }
 
+    fun getSavedTravelStatus(): com.example.data.location.UserTravelStatus {
+        val name = prefs.getString(KEY_USER_TRAVEL_STATUS, "STATIONARY") ?: "STATIONARY"
+        return try {
+            com.example.data.location.UserTravelStatus.valueOf(name)
+        } catch (_: Exception) {
+            com.example.data.location.UserTravelStatus.STATIONARY
+        }
+    }
+
+    fun saveTravelStatus(status: com.example.data.location.UserTravelStatus) {
+        prefs.edit().putString(KEY_USER_TRAVEL_STATUS, status.name).apply()
+    }
+
+    fun getSavedLocationServicesEnabled(): Boolean {
+        return prefs.getBoolean(KEY_LOCATION_SERVICES_ENABLED, true)
+    }
+
+    fun saveLocationServicesEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_LOCATION_SERVICES_ENABLED, enabled).apply()
+    }
+
     fun clearAll() {
         prefs.edit().clear().apply()
         _onboardingCompletedFlow.value = false
@@ -132,5 +153,7 @@ class AppPreferences(context: Context) {
         private const val KEY_FOOD_HINT_SHOWN = "key_food_hint_shown"
         private const val KEY_REQUEST_HINT_SHOWN = "key_request_hint_shown"
         private const val KEY_VENDOR_HINT_SHOWN = "key_vendor_hint_shown"
+        private const val KEY_USER_TRAVEL_STATUS = "key_user_travel_status"
+        private const val KEY_LOCATION_SERVICES_ENABLED = "key_location_services_enabled"
     }
 }
