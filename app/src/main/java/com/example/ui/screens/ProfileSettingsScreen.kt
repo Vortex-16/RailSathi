@@ -693,7 +693,7 @@ fun ProfileSettingsScreen(
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
                                 Text(
-                                    text = "How RailSaathi works",
+                                    text = "How RailSathi works",
                                     fontSize = if (isSeniorMode) 17.sp else 15.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = CharcoalText

@@ -270,7 +270,7 @@ private fun Screen1Introduction() {
         ) {
             Icon(
                 imageVector = Icons.Default.DirectionsTransit,
-                contentDescription = "RailSaathi Logo",
+                contentDescription = "RailSathi Logo",
                 tint = Color.White,
                 modifier = Modifier.size(42.dp)
             )
@@ -279,7 +279,7 @@ private fun Screen1Introduction() {
         Spacer(modifier = Modifier.height(20.dp))
 
         Text(
-            text = "RailSaathi",
+            text = "RailSathi",
             fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = RailNavy,
@@ -389,7 +389,7 @@ private fun Screen2LanguageSelection(
             color = RailNavy
         )
         Text(
-            text = "Choose your preferred language for RailSaathi",
+            text = "Choose your preferred language for RailSathi",
             fontSize = 14.sp,
             color = CharcoalTextMuted,
             modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
@@ -487,7 +487,7 @@ private fun Screen3AuthAndRole(
         horizontalAlignment = Alignment.Start
     ) {
         Text(
-            text = "Welcome to RailSaathi",
+            text = "Welcome to RailSathi",
             fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = RailNavy
