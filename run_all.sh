@@ -9,7 +9,7 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 
 echo -e "${BLUE}====================================================${NC}"
-echo -e "${BLUE}        RailSaathi All-in-One Runner Script        ${NC}"
+echo -e "${BLUE}        RailSathi All-in-One Runner Script         ${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -18,7 +18,7 @@ cd "$PROJECT_ROOT"
 # ----------------------------------------------------
 # Step 1: Start Backend Server in the Background
 # ----------------------------------------------------
-echo -e "\n${YELLOW}[1/3] Preparing and Starting RailSaathi Backend Server...${NC}"
+echo -e "\n${YELLOW}[1/3] Preparing and Starting RailSathi Backend Server...${NC}"
 cd "$PROJECT_ROOT/backend"
 
 if [ ! -d "node_modules" ]; then
@@ -69,17 +69,17 @@ APK_PATH="$PROJECT_ROOT/app/build/outputs/apk/debug/app-debug.apk"
 
 if [ -f "$APK_PATH" ]; then
     # Create a symlink in project root for instant access
-    ln -sf "$APK_PATH" "$PROJECT_ROOT/RailSaathi-debug.apk"
+    ln -sf "$APK_PATH" "$PROJECT_ROOT/RailSathi-debug.apk"
     
     echo -e "\n${GREEN}====================================================${NC}"
-    echo -e "${GREEN}🎉 SUCCESS! RailSaathi Build Completed!${NC}"
+    echo -e "${GREEN}🎉 SUCCESS! RailSathi Build Completed!${NC}"
     echo -e "${GREEN}====================================================${NC}"
     echo -e "1. Backend Server:  ${GREEN}Running on http://localhost:8080${NC}"
     echo -e "   - To preview backend in Cloud Shell: Click 'Web Preview' -> 'Preview on port 8080'"
-    echo -e "2. APK Output:      ${GREEN}$PROJECT_ROOT/RailSaathi-debug.apk${NC}"
-    echo -e "   - Shortcut created at: ${BLUE}RailSaathi-debug.apk${NC}"
+    echo -e "2. APK Output:      ${GREEN}$PROJECT_ROOT/RailSathi-debug.apk${NC}"
+    echo -e "   - Shortcut created at: ${BLUE}RailSathi-debug.apk${NC}"
     echo -e "   - To download to your computer in Cloud Shell:"
-    echo -e "     Run: ${YELLOW}cloudshell download $PROJECT_ROOT/RailSaathi-debug.apk${NC}"
+    echo -e "     Run: ${YELLOW}cloudshell download $PROJECT_ROOT/RailSathi-debug.apk${NC}"
     echo -e "====================================================\n"
 else
     echo -e "${RED}❌ APK was not found at $APK_PATH. Please check Gradle output above.${NC}"
