@@ -133,12 +133,21 @@ fun TravelerHomeScreen(
     onSimulateStation: (String) -> Unit = {},
     userTravelStatus: com.example.data.location.UserTravelStatus = com.example.data.location.UserTravelStatus.STATIONARY,
     locationManagerState: com.example.data.location.LocationManagerState = com.example.data.location.LocationManagerState(),
-    onToggleActiveTravel: () -> Unit = {}
+    onToggleActiveTravel: () -> Unit = {},
+    availableCoaches: List<String> = emptyList()
 ) {
     var seatLocationText by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
 
-    val coachOptions = listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+    val coachOptions = if (availableCoaches.isNotEmpty()) {
+        availableCoaches
+    } else if (selectedRoute?.coachCodes?.isNotEmpty() == true) {
+        selectedRoute.coachCodes
+    } else if (selectedCandidate?.coachCodes?.isNotEmpty() == true) {
+        selectedCandidate.coachCodes
+    } else {
+        listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+    }
 
     val filteredSnacks = remember(selectedFilter) {
         RegionalSnacksCatalog.items.filter { item ->
@@ -857,6 +866,16 @@ fun TravelerHomeScreen(
                                                     contentScale = ContentScale.Crop,
                                                     modifier = Modifier.fillMaxSize()
                                                 )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .align(Alignment.TopEnd)
+                                                        .padding(4.dp)
+                                                        .clip(CircleShape)
+                                                        .background(Color.White.copy(alpha = 0.92f))
+                                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(text = fav.emoji, fontSize = 12.sp)
+                                                }
                                             } else {
                                                 Text(
                                                     text = fav.emoji,
@@ -1100,6 +1119,15 @@ fun SnackFoodItemCard(
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.BottomEnd)
+                                .clip(RoundedCornerShape(topStart = 6.dp))
+                                .background(Color.White.copy(alpha = 0.92f))
+                                .padding(horizontal = 4.dp, vertical = 1.dp)
+                        ) {
+                            Text(text = item.emoji, fontSize = 12.sp)
+                        }
                     } else {
                         Text(
                             text = item.emoji,

@@ -93,7 +93,8 @@ fun VendorHomeScreen(
     onEndShift: () -> Unit,
     onAcceptAndOfferPrice: (FoodRequestEntity, VendorEntity, Int) -> Unit,
     onDeliverSale: (FoodRequestEntity, VendorEntity) -> Unit,
-    onQuickManualSale: (vendor: VendorEntity, foodName: String, amount: Double, coach: String) -> Unit
+    onQuickManualSale: (vendor: VendorEntity, foodName: String, amount: Double, coach: String) -> Unit,
+    availableCoaches: List<String> = emptyList()
 ) {
     val currentVendor = vendor ?: (allVendors.firstOrNull() ?: VendorEntity(
         vendorId = "vendor_jhalmuri_1",
@@ -109,7 +110,13 @@ fun VendorHomeScreen(
     ))
 
     var isOnline by remember { mutableStateOf(currentVendor.isOnline) }
-    val coachList = listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+    val coachList = if (availableCoaches.isNotEmpty()) {
+        availableCoaches
+    } else if (selectedRoute?.coachCodes?.isNotEmpty() == true) {
+        selectedRoute.coachCodes
+    } else {
+        listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+    }
 
     // Selected unit price for pending requests: Map<RequestId, UnitPrice>
     val selectedPrices = remember { mutableStateMapOf<Long, Int>() }

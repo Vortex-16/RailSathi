@@ -198,3 +198,61 @@ interface JourneySessionDao {
     @Query("DELETE FROM journey_sessions WHERE status != 'ACTIVE'")
     suspend fun cleanOldJourneys()
 }
+
+@Dao
+interface TrainDao {
+    @Query("SELECT * FROM trains ORDER BY departureTime ASC")
+    fun getAllTrains(): Flow<List<TrainEntity>>
+
+    @Query("SELECT * FROM trains ORDER BY departureTime ASC")
+    suspend fun getAllTrainsDirect(): List<TrainEntity>
+
+    @Query("SELECT * FROM trains WHERE originStationCode = :stationCode OR destStationCode = :stationCode ORDER BY departureTime ASC")
+    fun getTrainsForStation(stationCode: String): Flow<List<TrainEntity>>
+
+    @Query("SELECT * FROM trains WHERE originStationCode = :stationCode OR destStationCode = :stationCode ORDER BY departureTime ASC")
+    suspend fun getTrainsForStationDirect(stationCode: String): List<TrainEntity>
+
+    @Query("SELECT * FROM trains WHERE trainNumber = :trainNumber LIMIT 1")
+    fun getTrainByNumber(trainNumber: String): Flow<TrainEntity?>
+
+    @Query("SELECT * FROM trains WHERE trainNumber = :trainNumber LIMIT 1")
+    suspend fun getTrainByNumberDirect(trainNumber: String): TrainEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTrains(trains: List<TrainEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertTrain(train: TrainEntity)
+
+    @Query("UPDATE trains SET coachCodes = :coachCodes, lastUpdated = :timestamp WHERE trainNumber = :trainNumber")
+    suspend fun updateCoachCodes(trainNumber: String, coachCodes: String, timestamp: Long = System.currentTimeMillis())
+
+    @Query("UPDATE trains SET statusSummary = :status, delayMinutes = :delayMinutes, platform = :platform, lastUpdated = :timestamp WHERE trainNumber = :trainNumber")
+    suspend fun updateLiveStatus(trainNumber: String, status: String, delayMinutes: Int, platform: String, timestamp: Long = System.currentTimeMillis())
+
+    @Query("DELETE FROM trains WHERE lastUpdated < :cutoff")
+    suspend fun deleteOldTrains(cutoff: Long)
+}
+
+@Dao
+interface StationDao {
+    @Query("SELECT * FROM stations ORDER BY nameEn ASC")
+    fun getAllStations(): Flow<List<StationEntity>>
+
+    @Query("SELECT * FROM stations ORDER BY nameEn ASC")
+    suspend fun getAllStationsDirect(): List<StationEntity>
+
+    @Query("SELECT * FROM stations WHERE code = :code LIMIT 1")
+    suspend fun getStationByCode(code: String): StationEntity?
+
+    @Query("SELECT * FROM stations WHERE code LIKE '%' || :query || '%' OR nameEn LIKE '%' || :query || '%' OR nameHi LIKE '%' || :query || '%' OR nameBn LIKE '%' || :query || '%'")
+    suspend fun searchStations(query: String): List<StationEntity>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStations(stations: List<StationEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStation(station: StationEntity)
+}
+

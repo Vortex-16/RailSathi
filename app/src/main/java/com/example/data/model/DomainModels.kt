@@ -68,21 +68,21 @@ object RegionalSnacksCatalog {
         // West Bengal & Eastern
         FoodItem(
             id = "jhalmuri_kol",
-            nameEn = "Kolkata Jhalmuri",
-            nameHi = "कोलकाता झालमुड़ी (मसाला मुड़ी)",
-            nameBn = "কলকাতা খাঁটি ঝালমুড়ি",
-            nameMr = "कोलकाता झालमुरी",
-            nameTa = "கொல்கத்தா ஜால்முரி",
+            nameEn = "Kolkata Jhalmuri (Mudhi / Puffed Rice)",
+            nameHi = "कोलकाता झालमुड़ी (मसाला मुड़ी / मुरमुरा)",
+            nameBn = "কলকাতা খাঁটি ঝালমুড়ি (মুড়ি মাখা)",
+            nameMr = "कोलकाता झालमुरी (भेळ / चुरमुरे)",
+            nameTa = "கொல்கத்தா ஜால்முரி (பொரி)",
             state = "West Bengal",
             region = "Eastern",
             category = "Snacks",
             isVeg = true,
             isJain = false,
             isSeniorFriendly = true,
-            dietaryTags = listOf("Spicy", "Puffed Rice", "Mustard Oil"),
+            dietaryTags = listOf("Spicy", "Puffed Rice (Mudhi)", "Mustard Oil"),
             emoji = "🥣",
-            description = "Fresh spicy puffed rice with mustard oil, boiled potato, coconut and crunchy mixture",
-            imageUrl = "https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=600&q=80",
+            description = "Fresh authentic spicy puffed rice (Mudhi) with mustard oil, boiled potato, coconut, and crunchy mixture",
+            imageUrl = "https://images.unsplash.com/photo-1596797038530-2c107229654b?auto=format&fit=crop&w=600&q=80",
             typicalPriceInr = 20
         ),
         FoodItem(
@@ -139,7 +139,7 @@ object RegionalSnacksCatalog {
             dietaryTags = listOf("Crunchy", "High Protein"),
             emoji = "🥜",
             description = "Hot sand-roasted crunchy peanuts with rock salt",
-            imageUrl = "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80",
+            imageUrl = "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?auto=format&fit=crop&w=600&q=80",
             typicalPriceInr = 15
         ),
         FoodItem(
@@ -156,9 +156,9 @@ object RegionalSnacksCatalog {
             isJain = true,
             isSeniorFriendly = false,
             dietaryTags = listOf("Tangy", "Black Gram"),
-            emoji = "🌶️",
+            emoji = "🌰",
             description = "Flattened pressed black gram tossed with tangy lemon, green chilli and spice mix",
-            imageUrl = "https://images.unsplash.com/photo-1563245372-f21724e3856d?auto=format&fit=crop&w=600&q=80",
+            imageUrl = "https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=600&q=80",
             typicalPriceInr = 20
         ),
         FoodItem(
@@ -196,7 +196,7 @@ object RegionalSnacksCatalog {
             isJain = false,
             isSeniorFriendly = true,
             dietaryTags = listOf("Iconic", "Freshly Fried"),
-            emoji = "🥪",
+            emoji = "🍔",
             description = "Crispy spiced potato dumpling in fresh pav with dry garlic chutney",
             imageUrl = "https://images.unsplash.com/photo-1606491956689-2ea866880c84?auto=format&fit=crop&w=600&q=80",
             typicalPriceInr = 20
@@ -295,7 +295,7 @@ object RegionalSnacksCatalog {
             isJain = true,
             isSeniorFriendly = true,
             dietaryTags = listOf("Steamed", "Low Calorie"),
-            emoji = "🟨",
+            emoji = "🟡",
             description = "Fluffy steamed gram flour savory cake tempered with mustard seeds and curry leaves",
             imageUrl = "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80",
             typicalPriceInr = 25

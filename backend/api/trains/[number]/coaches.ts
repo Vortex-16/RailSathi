@@ -1,5 +1,5 @@
 import { railRadarClient } from '../../../src/providers/RailRadarClient';
-import { query } from '../../../src/db';
+import { query, memoryStore } from '../../../src/db';
 import { successResponse, errorResponse } from '../../../src/utils/response';
 
 const DEFAULT_COACH_COMPOSITIONS: Record<string, string[]> = {
@@ -23,7 +23,17 @@ export default async function handler(req: any, res: any) {
   const trainNum = String(number);
 
   try {
-    // 1. Check PostgreSQL cached coach layout
+    // 1. Check in-memory store
+    if (memoryStore.trainCoaches.has(trainNum)) {
+      const cached = memoryStore.trainCoaches.get(trainNum)!;
+      return res.status(200).json(successResponse({
+        trainNumber: trainNum,
+        coaches: cached,
+        source: 'db'
+      }));
+    }
+
+    // 2. Check PostgreSQL cached coach layout
     const dbRes = await query(
       'SELECT coach_code, coach_type, position_sequence FROM train_coaches WHERE train_number = $1 ORDER BY position_sequence ASC',
       [trainNum]
@@ -31,6 +41,7 @@ export default async function handler(req: any, res: any) {
 
     if (dbRes && dbRes.rows && dbRes.rows.length > 0) {
       const coaches = dbRes.rows.map((r: any) => r.coach_code);
+      memoryStore.trainCoaches.set(trainNum, coaches);
       return res.status(200).json(successResponse({
         trainNumber: trainNum,
         coaches,
@@ -38,9 +49,21 @@ export default async function handler(req: any, res: any) {
       }));
     }
 
-    // 2. Fetch from RailRadar via server API key
+    // 3. Fetch from RailRadar via server API key
     const liveCoaches = await railRadarClient.getTrainCoaches(trainNum, station as string);
     if (liveCoaches && Array.isArray(liveCoaches) && liveCoaches.length > 0) {
+      memoryStore.trainCoaches.set(trainNum, liveCoaches);
+      try {
+        for (let i = 0; i < liveCoaches.length; i++) {
+          await query(
+            `INSERT INTO train_coaches (train_number, coach_code, position_sequence)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (train_number, coach_code) DO UPDATE SET position_sequence = $3`,
+            [trainNum, liveCoaches[i], i + 1]
+          );
+        }
+      } catch (_err) {}
+
       return res.status(200).json(successResponse({
         trainNumber: trainNum,
         coaches: liveCoaches,
@@ -48,14 +71,27 @@ export default async function handler(req: any, res: any) {
       }));
     }
 
-    // 3. Fallback to train-type specific rake composition
+    // 4. Dynamic train-type specific rake composition
     const isEmu = trainNum.startsWith('3') || trainNum.startsWith('9') || trainNum.length === 5;
-    const fallbackList = isEmu ? DEFAULT_COACH_COMPOSITIONS['EMU'] : DEFAULT_COACH_COMPOSITIONS['EXP_DEFAULT'];
+    const dynamicCoaches = isEmu ? DEFAULT_COACH_COMPOSITIONS['EMU'] : DEFAULT_COACH_COMPOSITIONS['EXP_DEFAULT'];
+    
+    // Save to memory store and db for future hits
+    memoryStore.trainCoaches.set(trainNum, dynamicCoaches);
+    try {
+      for (let i = 0; i < dynamicCoaches.length; i++) {
+        await query(
+          `INSERT INTO train_coaches (train_number, coach_code, position_sequence)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (train_number, coach_code) DO UPDATE SET position_sequence = $3`,
+          [trainNum, dynamicCoaches[i], i + 1]
+        );
+      }
+    } catch (_err) {}
 
     return res.status(200).json(successResponse({
       trainNumber: trainNum,
-      coaches: fallbackList,
-      source: 'fallback'
+      coaches: dynamicCoaches,
+      source: 'dynamic'
     }));
   } catch (err: any) {
     return res.status(500).json(errorResponse(err.message || 'Internal Server Error'));

@@ -22,6 +22,8 @@ export const memoryStore = {
   journeys: new Map<string, any>(),
   foodRequests: new Map<string, any>(),
   orders: new Map<string, any>(),
+  trains: new Map<string, any>(),
+  trainCoaches: new Map<string, string[]>(),
   syncKeys: new Set<string>()
 };
 

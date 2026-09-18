@@ -17,8 +17,8 @@ android {
     applicationId = "com.aistudio.railsathi.vkmpx"
     minSdk = 24
     targetSdk = 36
-    versionCode = 10001
-    versionName = "1.0.0.1"
+    versionCode = 10002
+    versionName = "1.0.0.2"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

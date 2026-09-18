@@ -29,7 +29,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsTransit
 import androidx.compose.material.icons.filled.Elderly
 import androidx.compose.material.icons.filled.Fastfood
-import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.ReceiptLong
@@ -192,17 +192,32 @@ fun RailAppTopBar(
                         }
                     }
 
-                    // Language dropdown button
+                    // Language dropdown button with proper Translate icon
                     Box {
-                        IconButton(
-                            onClick = { showLangMenu = true },
-                            modifier = Modifier.size(38.dp).testTag("lang_select_btn")
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0x33FFFFFF))
+                                .clickable { showLangMenu = true }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                .testTag("lang_select_btn"),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Language,
-                                contentDescription = "Language",
-                                tint = Color.White
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.Translate,
+                                    contentDescription = "Select Language",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = language.nativeName.take(4),
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
 
                         DropdownMenu(

@@ -3,6 +3,9 @@ package com.example.data.repository
 import android.util.Log
 import com.example.data.engine.FilteredTrainReport
 import com.example.data.engine.UpcomingTrainFilter
+import com.example.data.local.AppDatabase
+import com.example.data.local.StationEntity
+import com.example.data.local.TrainEntity
 import com.example.data.model.AuthenticEmuFormations
 import com.example.data.model.IndianLocalRailwayDatabase
 import com.example.data.model.LiveTrainStatus
@@ -34,12 +37,14 @@ interface RailwayDataProvider {
     suspend fun getTrainSchedule(trainNumber: String): LocalTrainSchedule?
     suspend fun getTrainRouteDetails(trainNumber: String): TrainRouteDetails?
     suspend fun getAllRoutes(): List<TrainRouteDetails>
+    suspend fun getDynamicCoaches(trainNumber: String): List<String>
     suspend fun getLiveTrainStatus(trainNumber: String, currentStationCode: String?): LiveTrainStatus
     suspend fun searchStationsAndTrains(query: String): Pair<List<RailwayStation>, List<TrainCandidate>>
     fun getRecentApiLogs(): List<ApiDiagnosticsLog>
 }
 
 class HybridRailwayDataProvider(
+    private val db: AppDatabase? = null,
     private val localFallback: RailwayDataProvider = LocalStaticRailwayDataProvider()
 ) : RailwayDataProvider {
 
@@ -114,6 +119,22 @@ class HybridRailwayDataProvider(
                             longitude = dto.longitude ?: 88.3713
                         )
                     }
+                    try {
+                        val entities = list.map { st ->
+                            StationEntity(
+                                code = st.code,
+                                nameEn = st.nameEn,
+                                nameHi = st.nameHi,
+                                nameBn = st.nameBn,
+                                zone = st.division,
+                                latitude = st.latitude,
+                                longitude = st.longitude,
+                                lastUpdated = now
+                            )
+                        }
+                        db?.stationDao()?.insertStations(entities)
+                    } catch (_: Exception) {}
+
                     cachedStations = list
                     cachedStationsTimestamp = now
                     return@withContext list
@@ -122,6 +143,27 @@ class HybridRailwayDataProvider(
         } catch (_: Exception) {
             // Safe fallback
         }
+
+        // Try reading persisted stations from local DB before static fallback
+        try {
+            val dbStations = db?.stationDao()?.getAllStationsDirect()
+            if (!dbStations.isNullOrEmpty()) {
+                val list = dbStations.map { entity ->
+                    RailwayStation(
+                        code = entity.code,
+                        nameEn = entity.nameEn,
+                        nameHi = entity.nameHi.ifEmpty { entity.nameEn },
+                        nameBn = entity.nameBn.ifEmpty { entity.nameEn },
+                        division = entity.zone,
+                        latitude = entity.latitude,
+                        longitude = entity.longitude
+                    )
+                }
+                cachedStations = list
+                cachedStationsTimestamp = now
+                return@withContext list
+            }
+        } catch (_: Exception) {}
 
         val fallback = localFallback.getAllStations()
         cachedStations = fallback
@@ -186,6 +228,16 @@ class HybridRailwayDataProvider(
                 val liveList = res.body()?.data
                 if (!liveList.isNullOrEmpty()) {
                     val map = liveList.associate { dto ->
+                        // Persist live status into local database
+                        try {
+                            db?.trainDao()?.updateLiveStatus(
+                                trainNumber = dto.trainNumber,
+                                status = dto.status,
+                                delayMinutes = dto.delayMinutes,
+                                platform = dto.platform
+                            )
+                        } catch (_: Exception) {}
+
                         dto.trainNumber to LiveTrainStatus(
                             trainNumber = dto.trainNumber,
                             trainName = dto.trainName,
@@ -229,6 +281,12 @@ class HybridRailwayDataProvider(
                 val remoteList = res.body()?.data
                 if (!remoteList.isNullOrEmpty()) {
                     val list = remoteList.map { dto ->
+                        val isEmu = dto.trainNumber.startsWith("3") || dto.trainNumber.startsWith("9") || dto.trainNumber.length == 5
+                        val defaultCoaches = if (isEmu) {
+                            listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+                        } else {
+                            listOf("LOCO", "EOG-1", "GS-1", "S1", "S2", "S3", "S4", "S5", "B1", "B2", "B3", "A1", "H1", "PC", "GS-2", "EOG-2")
+                        }
                         TrainCandidate(
                             trainNumber = dto.trainNumber,
                             trainName = dto.trainName,
@@ -240,9 +298,34 @@ class HybridRailwayDataProvider(
                             arrivalTime = "09:30",
                             platform = dto.platform.ifEmpty { "PF 1" },
                             zone = "ER",
-                            coachCodes = listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+                            coachCodes = defaultCoaches
                         )
                     }
+
+                    // Record trains into Room database so they are never lost
+                    try {
+                        val entities = list.map { candidate ->
+                            TrainEntity(
+                                trainNumber = candidate.trainNumber,
+                                trainName = candidate.trainName,
+                                originStationCode = candidate.originStationCode,
+                                originStationName = candidate.originStationName,
+                                destStationCode = candidate.destStationCode,
+                                destStationName = candidate.destStationName,
+                                departureTime = candidate.departureTime,
+                                arrivalTime = candidate.arrivalTime,
+                                platform = candidate.platform,
+                                type = "EMU Local",
+                                zone = candidate.zone,
+                                coachCodes = candidate.coachCodes.joinToString(","),
+                                lastUpdated = now
+                            )
+                        }
+                        db?.trainDao()?.insertTrains(entities)
+                    } catch (e: Exception) {
+                        Log.w("HybridRailwayDataProvider", "Could not persist trains to Room: ${e.message}")
+                    }
+
                     departureCache[stationCode] = Pair(list, now)
                     return list
                 }
@@ -250,6 +333,30 @@ class HybridRailwayDataProvider(
         } catch (_: Exception) {
             // Safe fallback
         }
+
+        // Try querying persisted trains from Room database before static fallback
+        try {
+            val dbTrains = db?.trainDao()?.getTrainsForStationDirect(stationCode)
+            if (!dbTrains.isNullOrEmpty()) {
+                val dbCandidates = dbTrains.map { entity ->
+                    TrainCandidate(
+                        trainNumber = entity.trainNumber,
+                        trainName = entity.trainName,
+                        originStationCode = entity.originStationCode,
+                        originStationName = entity.originStationName,
+                        destStationCode = entity.destStationCode,
+                        destStationName = entity.destStationName,
+                        departureTime = entity.departureTime,
+                        arrivalTime = entity.arrivalTime,
+                        platform = entity.platform,
+                        zone = entity.zone,
+                        coachCodes = entity.coachCodes.split(",").filter { it.isNotBlank() }
+                    )
+                }
+                departureCache[stationCode] = Pair(dbCandidates, now)
+                return dbCandidates
+            }
+        } catch (_: Exception) {}
 
         val localList = localFallback.getStationDepartures(stationCode)
         departureCache[stationCode] = Pair(localList, now)
@@ -261,11 +368,84 @@ class HybridRailwayDataProvider(
     }
 
     override suspend fun getTrainRouteDetails(trainNumber: String): TrainRouteDetails? {
+        // Try resolving from database
+        try {
+            val dbTrain = db?.trainDao()?.getTrainByNumberDirect(trainNumber)
+            if (dbTrain != null) {
+                return TrainRouteDetails(
+                    trainNumber = dbTrain.trainNumber,
+                    trainName = dbTrain.trainName,
+                    stations = listOf(
+                        "${dbTrain.originStationName} (${dbTrain.originStationCode})",
+                        "${dbTrain.destStationName} (${dbTrain.destStationCode})"
+                    ),
+                    currentStationIndex = 0,
+                    currentPlatform = dbTrain.platform,
+                    coachCodes = dbTrain.coachCodes.split(",").filter { it.isNotBlank() }
+                )
+            }
+        } catch (_: Exception) {}
         return localFallback.getTrainRouteDetails(trainNumber)
     }
 
     override suspend fun getAllRoutes(): List<TrainRouteDetails> {
+        // Load dynamically from Room database first
+        try {
+            val dbTrains = db?.trainDao()?.getAllTrainsDirect()
+            if (!dbTrains.isNullOrEmpty()) {
+                return dbTrains.map { entity ->
+                    TrainRouteDetails(
+                        trainNumber = entity.trainNumber,
+                        trainName = entity.trainName,
+                        stations = listOf(
+                            "${entity.originStationName} (${entity.originStationCode})",
+                            "${entity.destStationName} (${entity.destStationCode})"
+                        ),
+                        currentStationIndex = 0,
+                        currentPlatform = entity.platform,
+                        coachCodes = entity.coachCodes.split(",").filter { it.isNotBlank() }
+                    )
+                }
+            }
+        } catch (_: Exception) {}
         return localFallback.getAllRoutes()
+    }
+
+    override suspend fun getDynamicCoaches(trainNumber: String): List<String> = withContext(Dispatchers.IO) {
+        // 1. Fetch real coach composition from backend API
+        try {
+            val res = ApiClient.apiService.getTrainCoaches(trainNumber)
+            if (res.isSuccessful && res.body()?.success == true) {
+                val remoteCoaches = res.body()?.data?.coaches
+                if (!remoteCoaches.isNullOrEmpty()) {
+                    try {
+                        db?.trainDao()?.updateCoachCodes(trainNumber, remoteCoaches.joinToString(","))
+                    } catch (_: Exception) {}
+                    return@withContext remoteCoaches
+                }
+            }
+        } catch (_: Exception) {}
+
+        // 2. Check cached coach layout in Room database
+        try {
+            val dbTrain = db?.trainDao()?.getTrainByNumberDirect(trainNumber)
+            if (dbTrain != null && dbTrain.coachCodes.isNotBlank()) {
+                val list = dbTrain.coachCodes.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                if (list.isNotEmpty()) return@withContext list
+            }
+        } catch (_: Exception) {}
+
+        // 3. Dynamic composition based on train type
+        val isEmu = trainNumber.startsWith("3") || trainNumber.startsWith("9") || trainNumber.length == 5
+        val dynamicList = if (isEmu) {
+            listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+        } else {
+            listOf("LOCO", "EOG-1", "GS-1", "S1", "S2", "S3", "S4", "S5", "B1", "B2", "B3", "A1", "H1", "PC", "GS-2", "EOG-2")
+        }
+        try {
+            db?.trainDao()?.updateCoachCodes(trainNumber, dynamicList.joinToString(","))
+        } catch (_: Exception) {}
+        dynamicList
     }
 
     override suspend fun getLiveTrainStatus(trainNumber: String, currentStationCode: String?): LiveTrainStatus {
@@ -424,6 +604,19 @@ class LocalStaticRailwayDataProvider : RailwayDataProvider {
                 currentPlatform = sched.stops.firstOrNull()?.platform ?: "PF 1",
                 coachCodes = sched.coaches.map { it.coachCode }
             )
+        }
+    }
+
+    override suspend fun getDynamicCoaches(trainNumber: String): List<String> {
+        val sched = getTrainSchedule(trainNumber)
+        if (sched != null && sched.coaches.isNotEmpty()) {
+            return sched.coaches.map { it.coachCode }
+        }
+        val isEmu = trainNumber.startsWith("3") || trainNumber.startsWith("9") || trainNumber.length == 5
+        return if (isEmu) {
+            listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+        } else {
+            listOf("LOCO", "EOG-1", "GS-1", "S1", "S2", "S3", "S4", "S5", "B1", "B2", "B3", "A1", "H1", "PC", "GS-2", "EOG-2")
         }
     }
 

@@ -1,4 +1,5 @@
 import { railRadarClient } from './RailRadarClient';
+import { query, memoryStore } from '../db';
 
 export interface StationDto {
   code: string;
@@ -68,6 +69,24 @@ export class RailwayDataProvider {
 
   async getStationDepartures(stationCode: string): Promise<{ trains: TrainCandidateDto[]; source: 'live' | 'fallback' }> {
     const live = await railRadarClient.getStationTrains(stationCode);
+    const trainsToRecord = (live && Array.isArray(live) && live.length > 0) ? (live as TrainCandidateDto[]) : FALLBACK_TRAINS;
+
+    // Record trains in local/server database so they are never lost
+    try {
+      for (const t of trainsToRecord) {
+        memoryStore.trains.set(t.trainNumber, { ...t, stationCode, updatedAt: Date.now() });
+        await query(
+          `INSERT INTO trains (train_number, train_name, origin_station_code, dest_station_code, departure_time, platform, type, updated_at)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+           ON CONFLICT (train_number) DO UPDATE
+           SET train_name = $2, origin_station_code = $3, dest_station_code = $4, departure_time = $5, platform = $6, type = $7, updated_at = NOW()`,
+          [t.trainNumber, t.trainName, t.originStationCode, t.destStationCode, t.departureTime, t.platform, t.type || 'EMU Local']
+        );
+      }
+    } catch (_dbErr) {
+      // Graceful fallback to memory store
+    }
+
     if (live && Array.isArray(live) && live.length > 0) {
       return { trains: live as TrainCandidateDto[], source: 'live' };
     }

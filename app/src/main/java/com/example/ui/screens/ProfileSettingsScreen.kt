@@ -24,7 +24,7 @@ import androidx.compose.material.icons.filled.Elderly
 import androidx.compose.material.icons.filled.GpsFixed
 import androidx.compose.material.icons.filled.GpsNotFixed
 import androidx.compose.material.icons.filled.HelpOutline
-import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Storefront
@@ -426,7 +426,7 @@ fun ProfileSettingsScreen(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
                             Icon(
-                                imageVector = Icons.Default.Language,
+                                imageVector = Icons.Default.Translate,
                                 contentDescription = "Language",
                                 tint = RailNavy,
                                 modifier = Modifier.size(24.dp)
@@ -799,7 +799,25 @@ fun ProfileSettingsScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(30.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "RailSathi v1.0.0.2",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = CharcoalTextMuted
+                    )
+                    Text(
+                        text = "Real-time Indian Railways Suburban Network",
+                        fontSize = 11.sp,
+                        color = CharcoalTextMuted.copy(alpha = 0.8f)
+                    )
+                }
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }

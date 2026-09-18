@@ -161,6 +161,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _selectedCoach = MutableStateFlow("GS-2")
     val selectedCoach: StateFlow<String> = _selectedCoach.asStateFlow()
 
+    private val _availableCoaches = MutableStateFlow<List<String>>(
+        listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+    )
+    val availableCoaches: StateFlow<List<String>> = _availableCoaches.asStateFlow()
+
     private val _selectedFilterTag = MutableStateFlow("All")
     val selectedFilterTag: StateFlow<String> = _selectedFilterTag.asStateFlow()
 
@@ -307,11 +312,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         searchTimetable(query)
     }
 
+    fun loadCoachesForTrain(trainNumber: String) {
+        viewModelScope.launch {
+            val coaches = repository.getDynamicCoaches(trainNumber)
+            if (coaches.isNotEmpty()) {
+                _availableCoaches.value = coaches
+                if (!_availableCoaches.value.contains(_selectedCoach.value)) {
+                    _selectedCoach.value = coaches.firstOrNull { it.startsWith("GS") } ?: coaches.first()
+                }
+            }
+        }
+    }
+
     fun selectCandidateTrain(candidate: TrainCandidate) {
         trainContextEngine.selectCandidateTrain(candidate)
+        if (candidate.coachCodes.isNotEmpty()) {
+            _availableCoaches.value = candidate.coachCodes
+            if (!candidate.coachCodes.contains(_selectedCoach.value)) {
+                _selectedCoach.value = candidate.coachCodes.firstOrNull { it.startsWith("GS") } ?: candidate.coachCodes.first()
+            }
+        }
+        loadCoachesForTrain(candidate.trainNumber)
         val route = repository.availableRoutes.find { it.trainNumber == candidate.trainNumber }
         if (route != null) {
             _activeRouteDetails.value = route
+        } else {
+            _activeRouteDetails.value = TrainRouteDetails(
+                trainNumber = candidate.trainNumber,
+                trainName = candidate.trainName,
+                stations = listOf(
+                    "${candidate.originStationName} (${candidate.originStationCode})",
+                    "${candidate.destStationName} (${candidate.destStationCode})"
+                ),
+                currentStationIndex = 0,
+                currentPlatform = candidate.platform,
+                coachCodes = candidate.coachCodes
+            )
         }
     }
 

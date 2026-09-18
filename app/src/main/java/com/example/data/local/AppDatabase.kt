@@ -14,9 +14,11 @@ import androidx.room.RoomDatabase
         SaleRecordEntity::class,
         JourneySessionEntity::class,
         OrderEntity::class,
-        SyncQueueEntity::class
+        SyncQueueEntity::class,
+        TrainEntity::class,
+        StationEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -28,6 +30,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun journeySessionDao(): JourneySessionDao
     abstract fun orderDao(): OrderDao
     abstract fun syncQueueDao(): SyncQueueDao
+    abstract fun trainDao(): TrainDao
+    abstract fun stationDao(): StationDao
 
     companion object {
         @Volatile

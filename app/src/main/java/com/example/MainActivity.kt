@@ -93,6 +93,7 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
     val vendorHintShown by viewModel.vendorHintShown.collectAsState()
     val locationManagerState by viewModel.locationManagerState.collectAsState()
     val userTravelStatus by viewModel.userTravelStatus.collectAsState()
+    val availableCoaches by viewModel.availableCoaches.collectAsState()
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
@@ -247,7 +248,8 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 },
                                 onQuickManualSale = { v, item, amt, coach ->
                                     viewModel.recordManualSale(v, item, amt, coach)
-                                }
+                                },
+                                availableCoaches = availableCoaches
                             )
                         } else {
                             TravelerHomeScreen(
@@ -306,7 +308,8 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 },
                                 userTravelStatus = userTravelStatus,
                                 locationManagerState = locationManagerState,
-                                onToggleActiveTravel = { viewModel.toggleActiveTravel() }
+                                onToggleActiveTravel = { viewModel.toggleActiveTravel() },
+                                availableCoaches = availableCoaches
                             )
                         }
                     }

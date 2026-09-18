@@ -129,3 +129,37 @@ data class JourneySessionEntity(
     val isLiveTracking: Boolean = true,
     val trackingSource: String = "GPS"
 )
+
+@Entity(tableName = "trains")
+data class TrainEntity(
+    @PrimaryKey val trainNumber: String,
+    val trainName: String,
+    val originStationCode: String,
+    val originStationName: String,
+    val destStationCode: String,
+    val destStationName: String,
+    val departureTime: String,
+    val arrivalTime: String = "",
+    val platform: String = "PF 1",
+    val type: String = "EMU Local",
+    val zone: String = "Eastern Railway",
+    val coachCodes: String = "CAB-1,LD-1,VND-1,GS-1,GS-2,GS-3,VND-2,LD-2,CAB-2",
+    val stopsJson: String = "",
+    val isLiveApiAvailable: Boolean = true,
+    val delayMinutes: Int = 0,
+    val statusSummary: String = "On Time",
+    val lastUpdated: Long = System.currentTimeMillis()
+)
+
+@Entity(tableName = "stations")
+data class StationEntity(
+    @PrimaryKey val code: String,
+    val nameEn: String,
+    val nameHi: String = "",
+    val nameBn: String = "",
+    val zone: String = "Eastern Railway",
+    val latitude: Double = 22.5697,
+    val longitude: Double = 88.3712,
+    val lastUpdated: Long = System.currentTimeMillis()
+)
+

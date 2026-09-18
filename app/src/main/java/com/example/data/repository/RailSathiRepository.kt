@@ -53,7 +53,7 @@ data class TrainRouteDetails(
 
 class RailSathiRepository(
     private val db: AppDatabase,
-    val railwayDataProvider: RailwayDataProvider = HybridRailwayDataProvider(),
+    val railwayDataProvider: RailwayDataProvider = HybridRailwayDataProvider(db),
     context: Context? = null
 ) {
     private val userDao = db.userDao()
@@ -63,11 +63,43 @@ class RailSathiRepository(
     private val expenseDao = db.expenseDao()
     private val saleRecordDao = db.saleRecordDao()
     private val journeyDao = db.journeySessionDao()
+    private val trainDao = db.trainDao()
+    private val stationDao = db.stationDao()
 
     val syncManager = SyncManager(db)
     val nearbyManager = context?.let { NearbyConnectionsManager(it) }
 
-    val availableRoutes = IndianLocalRailwayDatabase.allSchedules.map { sched ->
+    // Dynamic routes loaded from local Room DB, updating reactively
+    val availableRoutesFlow: Flow<List<TrainRouteDetails>> = trainDao.getAllTrains().map { dbList ->
+        if (dbList.isNotEmpty()) {
+            dbList.map { entity ->
+                TrainRouteDetails(
+                    trainNumber = entity.trainNumber,
+                    trainName = entity.trainName,
+                    stations = listOf(
+                        "${entity.originStationName} (${entity.originStationCode})",
+                        "${entity.destStationName} (${entity.destStationCode})"
+                    ),
+                    currentStationIndex = 0,
+                    currentPlatform = entity.platform,
+                    coachCodes = entity.coachCodes.split(",").filter { it.isNotBlank() }
+                )
+            }
+        } else {
+            IndianLocalRailwayDatabase.allSchedules.map { sched ->
+                TrainRouteDetails(
+                    trainNumber = sched.trainNumber,
+                    trainName = sched.trainName,
+                    stations = sched.stops.map { "${it.stationName} (${it.stationCode})" },
+                    currentStationIndex = 0,
+                    currentPlatform = sched.stops.firstOrNull()?.platform ?: "PF 1",
+                    coachCodes = sched.coaches.map { it.coachCode }
+                )
+            }
+        }
+    }
+
+    var availableRoutes: List<TrainRouteDetails> = IndianLocalRailwayDatabase.allSchedules.map { sched ->
         TrainRouteDetails(
             trainNumber = sched.trainNumber,
             trainName = sched.trainName,
@@ -77,10 +109,29 @@ class RailSathiRepository(
             coachCodes = sched.coaches.map { it.coachCode }
         )
     }
+        private set
+
+    suspend fun refreshAvailableRoutes(): List<TrainRouteDetails> {
+        val routes = railwayDataProvider.getAllRoutes()
+        availableRoutes = routes
+        return routes
+    }
+
+    suspend fun getDynamicCoaches(trainNumber: String): List<String> {
+        return railwayDataProvider.getDynamicCoaches(trainNumber)
+    }
 
     init {
         CoroutineScope(Dispatchers.IO).launch {
             seedDefaultVendorsIfNeeded()
+            try {
+                refreshAvailableRoutes()
+            } catch (_: Exception) {}
+            availableRoutesFlow.collect { routes ->
+                if (routes.isNotEmpty()) {
+                    availableRoutes = routes
+                }
+            }
         }
     }
 
