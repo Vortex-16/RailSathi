@@ -14,11 +14,11 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.railsathi.vkmpx"
+    applicationId = "com.aistudio.railsathi.app"
     minSdk = 24
     targetSdk = 36
-    versionCode = 10002
-    versionName = "1.0.0.2"
+    versionCode = 10003
+    versionName = "1.0.0.3"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
