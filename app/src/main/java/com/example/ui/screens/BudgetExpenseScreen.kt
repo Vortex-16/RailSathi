@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -33,6 +34,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -54,12 +56,19 @@ import com.example.data.local.VendorEntity
 import com.example.data.model.IndianLanguage
 import com.example.data.model.UserRole
 import com.example.ui.localization.LocalizationManager
+import com.example.ui.theme.ForestPillButton
+import com.example.ui.theme.MarigoldPillButton
+import com.example.ui.theme.OutlinedPillButton
+import com.example.ui.theme.SunlitStampedCard
 import com.example.ui.theme.CharcoalText
 import com.example.ui.theme.CharcoalTextMuted
-import com.example.ui.theme.GoldYellow
+import com.example.ui.theme.ForestInk
+import com.example.ui.theme.Marigold
 import com.example.ui.theme.NatureGreen
 import com.example.ui.theme.NatureGreenLight
+import com.example.ui.theme.Parchment
 import com.example.ui.theme.RailNavy
+import com.example.ui.theme.SunlitCream
 import com.example.ui.theme.TerracottaAmber
 import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmSandBackground
@@ -93,37 +102,43 @@ fun BudgetExpenseScreen(
     if (showEditLimitDialog) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showEditLimitDialog = false },
+            containerColor = Parchment,
             title = {
-                Text("Edit Monthly Budget Limit", fontWeight = FontWeight.Bold, color = RailNavy)
+                Text("Edit Monthly Budget Limit", fontWeight = FontWeight.ExtraBold, color = ForestInk)
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("Set your target monthly commute snack & travel budget (₹):", fontSize = 14.sp, color = CharcoalText)
+                    Text("Set your target monthly commute snack & travel budget (₹):", fontSize = 14.sp, color = ForestInk)
                     OutlinedTextField(
                         value = newLimitText,
                         onValueChange = { newLimitText = it.filter { c -> c.isDigit() } },
                         label = { Text("Budget Limit (₹)") },
-                        modifier = Modifier.fillMaxWidth().testTag("edit_budget_limit_input")
+                        modifier = Modifier.fillMaxWidth().testTag("edit_budget_limit_input"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = ForestInk,
+                            unfocusedBorderColor = ForestInk.copy(alpha = 0.6f),
+                            focusedTextColor = ForestInk,
+                            unfocusedTextColor = ForestInk
+                        )
                     )
                 }
             },
             confirmButton = {
-                Button(
+                ForestPillButton(
                     onClick = {
                         val limit = newLimitText.toDoubleOrNull() ?: 1500.0
                         onUpdateBudgetLimit(limit)
                         showEditLimitDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
+                    text = "Save Limit",
                     modifier = Modifier.testTag("save_budget_limit_button")
-                ) {
-                    Text("Save Limit")
-                }
+                )
             },
             dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showEditLimitDialog = false }) {
-                    Text("Cancel")
-                }
+                OutlinedPillButton(
+                    onClick = { showEditLimitDialog = false },
+                    text = "Cancel"
+                )
             }
         )
     }
@@ -131,35 +146,35 @@ fun BudgetExpenseScreen(
     if (showResetConfirmDialog) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showResetConfirmDialog = false },
+            containerColor = Parchment,
             title = {
-                Text("Reset Monthly Budget", fontWeight = FontWeight.Bold, color = RailNavy)
+                Text("Reset Monthly Budget", fontWeight = FontWeight.ExtraBold, color = ForestInk)
             },
             text = {
-                Text("Are you sure you want to reset your monthly commute budget limit to ₹1500?", fontSize = 14.sp, color = CharcoalText)
+                Text("Are you sure you want to reset your monthly commute budget limit to ₹1500?", fontSize = 14.sp, color = ForestInk)
             },
             confirmButton = {
-                Button(
+                MarigoldPillButton(
                     onClick = {
                         onResetBudget()
                         showResetConfirmDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = TerracottaAmber),
+                    text = "Reset Budget",
                     modifier = Modifier.testTag("confirm_reset_budget_button")
-                ) {
-                    Text("Reset Budget")
-                }
+                )
             },
             dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showResetConfirmDialog = false }) {
-                    Text("Cancel")
-                }
+                OutlinedPillButton(
+                    onClick = { showResetConfirmDialog = false },
+                    text = "Cancel"
+                )
             }
         )
     }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = WarmSandBackground
+        color = SunlitCream
     ) {
         LazyColumn(
             modifier = Modifier
@@ -171,11 +186,11 @@ fun BudgetExpenseScreen(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Monthly Budget Summary Card
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 5.dp
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -187,27 +202,29 @@ fun BudgetExpenseScreen(
                                 Text(
                                     text = if (role == UserRole.VENDOR) "Vendor Revenue Ledger" else LocalizationManager.getString("nav_budget", language),
                                     fontSize = if (isSeniorMode) 18.sp else 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = RailNavy
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                                 Text(
                                     text = "Monthly Commute Snack Tracker",
                                     fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
                                     color = CharcoalTextMuted
                                 )
                             }
 
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(NatureGreenLight)
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .clip(RoundedCornerShape(1440.dp))
+                                    .background(Marigold)
+                                    .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
                             ) {
                                 Text(
                                     text = "Active Month",
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = NatureGreen
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                             }
                         }
@@ -224,13 +241,14 @@ fun BudgetExpenseScreen(
                                 Text(
                                     text = "Spent This Month",
                                     fontSize = 12.sp,
-                                    color = CharcoalTextMuted
+                                    color = CharcoalTextMuted,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
                                     text = "₹${totalSpent.toInt()}",
                                     fontSize = if (isSeniorMode) 28.sp else 24.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TerracottaAmber
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                             }
 
@@ -238,13 +256,14 @@ fun BudgetExpenseScreen(
                                 Text(
                                     text = "Monthly Budget Limit",
                                     fontSize = 12.sp,
-                                    color = CharcoalTextMuted
+                                    color = CharcoalTextMuted,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                                 Text(
                                     text = "₹${monthlyBudgetLimit.toInt()}",
                                     fontSize = 18.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalText
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                             }
                         }
@@ -255,34 +274,30 @@ fun BudgetExpenseScreen(
                             progress = { budgetProgress },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(8.dp)
-                                .clip(RoundedCornerShape(4.dp)),
-                            color = if (budgetProgress > 0.85f) Color(0xFFEF4444) else NatureGreen,
-                            trackColor = Color(0xFFE2E8F0)
+                                .height(10.dp)
+                                .clip(RoundedCornerShape(1440.dp))
+                                .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp)),
+                            color = if (budgetProgress > 0.85f) Color(0xFFEF4444) else Marigold,
+                            trackColor = Parchment
                         )
 
-                        Spacer(modifier = Modifier.height(6.dp))
-
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            androidx.compose.material3.OutlinedButton(
+                            OutlinedPillButton(
                                 onClick = { showEditLimitDialog = true },
+                                text = "Edit Limit",
                                 modifier = Modifier.weight(1f).testTag("edit_budget_limit_btn")
-                            ) {
-                                Text("Edit Limit", fontSize = 12.sp)
-                            }
+                            )
 
-                            androidx.compose.material3.OutlinedButton(
+                            OutlinedPillButton(
                                 onClick = { showResetConfirmDialog = true },
-                                modifier = Modifier.weight(1f).testTag("reset_budget_btn"),
-                                colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = TerracottaAmber)
-                            ) {
-                                Text("Reset", fontSize = 12.sp)
-                            }
+                                text = "Reset",
+                                modifier = Modifier.weight(1f).testTag("reset_budget_btn")
+                            )
                         }
                     }
                 }
@@ -290,11 +305,11 @@ fun BudgetExpenseScreen(
 
             // Estimated Savings Card
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = NatureGreenLight),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NatureGreen)
+                    containerColor = Marigold,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -306,13 +321,13 @@ fun BudgetExpenseScreen(
                             modifier = Modifier
                                 .size(42.dp)
                                 .clip(CircleShape)
-                                .background(NatureGreen),
+                                .background(ForestInk),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Savings,
                                 contentDescription = "Savings",
-                                tint = Color.White,
+                                tint = SunlitCream,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -323,13 +338,14 @@ fun BudgetExpenseScreen(
                             Text(
                                 text = "Estimated Savings: ₹$estimatedSavings this month",
                                 fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NatureGreen
+                                fontWeight = FontWeight.ExtraBold,
+                                color = ForestInk
                             )
                             Text(
                                 text = "Buying fresh local train hawker snacks directly saves ~25% compared to railway station food stalls!",
                                 fontSize = 11.sp,
-                                color = CharcoalText
+                                fontWeight = FontWeight.Medium,
+                                color = ForestInk.copy(alpha = 0.85f)
                             )
                         }
                     }
@@ -338,50 +354,41 @@ fun BudgetExpenseScreen(
 
             // Quick Add Expense Row
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Text(
                             text = "Quick Add Commute Snack Expense",
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ForestInk
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(10.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Button(
+                            OutlinedPillButton(
                                 onClick = { onAddExpense("Masala Chai", "Chai", 10.0, "C-4", "Quick cutting chai") },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEFF6FF)),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF93C5FD)),
+                                text = "Chai ₹10",
                                 modifier = Modifier.weight(1f).testTag("quick_expense_chai")
-                            ) {
-                                Text("Chai ₹10", color = RailNavy, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
+                            )
 
-                            Button(
+                            OutlinedPillButton(
                                 onClick = { onAddExpense("Jhalmuri", "Snacks", 20.0, "C-4", "Spicy jhalmuri packet") },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEFF6FF)),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF93C5FD)),
+                                text = "Jhalmuri ₹20",
                                 modifier = Modifier.weight(1f).testTag("quick_expense_muri")
-                            ) {
-                                Text("Jhalmuri ₹20", color = RailNavy, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
+                            )
 
-                            Button(
+                            OutlinedPillButton(
                                 onClick = { onAddExpense("Roasted Badam", "Nuts", 15.0, "C-4", "Garam badam thonga") },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEFF6FF)),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF93C5FD)),
+                                text = "Badam ₹15",
                                 modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Badam ₹15", color = RailNavy, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
+                            )
                         }
                     }
                 }
@@ -397,19 +404,19 @@ fun BudgetExpenseScreen(
                     Text(
                         text = "Expense History & Receipts (${expenses.size})",
                         fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = RailNavy
+                        fontWeight = FontWeight.ExtraBold,
+                        color = ForestInk
                     )
                 }
             }
 
             if (expenses.isEmpty()) {
                 item {
-                    Card(
+                    SunlitStampedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                        shape = RoundedCornerShape(12.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                        containerColor = Parchment,
+                        borderColor = ForestInk,
+                        shadowOffset = 3.dp
                     ) {
                         Box(
                             modifier = Modifier
@@ -420,18 +427,19 @@ fun BudgetExpenseScreen(
                             Text(
                                 text = "No expenses recorded yet. Order snacks or use quick-add buttons above!",
                                 fontSize = 13.sp,
-                                color = CharcoalTextMuted
+                                fontWeight = FontWeight.Medium,
+                                color = ForestInk.copy(alpha = 0.7f)
                             )
                         }
                     }
                 }
             } else {
                 items(expenses) { exp ->
-                    Card(
+                    SunlitStampedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, WarmBorder)
+                        containerColor = Parchment,
+                        borderColor = ForestInk,
+                        shadowOffset = 3.dp
                     ) {
                         Row(
                             modifier = Modifier
@@ -445,13 +453,14 @@ fun BudgetExpenseScreen(
                                     modifier = Modifier
                                         .size(38.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFFFEF3C7)),
+                                        .background(Marigold)
+                                        .border(BorderStroke(1.dp, ForestInk), CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Receipt,
                                         contentDescription = "Receipt",
-                                        tint = TerracottaAmber,
+                                        tint = ForestInk,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -461,23 +470,24 @@ fun BudgetExpenseScreen(
                                 Column {
                                     Text(
                                         text = exp.title,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.ExtraBold,
                                         fontSize = if (isSeniorMode) 15.sp else 13.sp,
-                                        color = CharcoalText
+                                        color = ForestInk
                                     )
                                     Text(
                                         text = "${exp.dateString} • Coach ${exp.coach}",
                                         fontSize = 11.sp,
-                                        color = CharcoalTextMuted
+                                        fontWeight = FontWeight.Medium,
+                                        color = ForestInk.copy(alpha = 0.7f)
                                     )
                                 }
                             }
 
                             Text(
                                 text = "₹${exp.amount.toInt()}",
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.ExtraBold,
                                 fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                                color = TerracottaAmber
+                                color = ForestInk
                             )
                         }
                     }
@@ -485,7 +495,7 @@ fun BudgetExpenseScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(96.dp))
             }
         }
     }

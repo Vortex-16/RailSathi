@@ -20,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
@@ -28,9 +29,12 @@ import com.example.data.model.UserRole
 import com.example.data.repository.CollisionCheckResult
 import com.example.ui.components.BannerNotificationToast
 import com.example.ui.components.CollisionWarningDialog
+import com.example.ui.components.NotificationsDialog
 import com.example.ui.components.RailAppTopBar
 import com.example.ui.components.RailBottomNavBar
 import com.example.ui.components.TrainDiagnosticsDialog
+import com.example.ui.components.UserGuidanceModal
+import com.example.ui.components.UserGuideAudience
 import com.example.ui.screens.BudgetExpenseScreen
 import com.example.ui.screens.CoachRadarScreen
 import com.example.ui.screens.OnboardingAuthScreen
@@ -38,6 +42,7 @@ import com.example.ui.screens.ProfileSettingsScreen
 import com.example.ui.screens.TravelerHomeScreen
 import com.example.ui.screens.VendorHomeScreen
 import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.SunlitCream
 import com.example.ui.viewmodel.AppNavTab
 import com.example.ui.viewmodel.MainViewModel
 
@@ -77,6 +82,8 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchedTrains by viewModel.searchedTrains.collectAsState()
     val selectedQuantities by viewModel.selectedQuantities.collectAsState()
+    val nearbyStation by viewModel.nearbyStation.collectAsState()
+    val allApiStations by viewModel.allApiStations.collectAsState()
 
     val activeUser by viewModel.activeUser.collectAsState()
     val activeRequests by viewModel.activeRequests.collectAsState()
@@ -117,6 +124,8 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
     }
 
     var showDiagnosticsDialog by remember { mutableStateOf(false) }
+    var showGlobalUserGuide by remember { mutableStateOf(false) }
+    var showGlobalNotifications by remember { mutableStateOf(false) }
 
     // Permission launcher for Location and Notifications (Contextual)
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -181,6 +190,7 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
         )
     } else {
         Scaffold(
+            containerColor = SunlitCream,
             topBar = {
                 RailAppTopBar(
                     role = currentRole,
@@ -194,23 +204,16 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                     onToggleSeniorMode = { viewModel.toggleSeniorMode(it) },
                     onSwitchRole = {
                         viewModel.setNavTab(AppNavTab.PROFILE)
-                    }
-                )
-            },
-            bottomBar = {
-                RailBottomNavBar(
-                    activeTab = activeNavTab,
-                    onTabSelected = { viewModel.setNavTab(it) },
-                    language = currentLanguage,
-                    role = currentRole,
-                    isSeniorMode = isSeniorMode
+                    },
+                    onOpenNotifications = { showGlobalNotifications = true },
+                    onOpenHelp = { showGlobalUserGuide = true }
                 )
             }
         ) { innerPadding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(top = innerPadding.calculateTopPadding())
             ) {
                 when (activeNavTab) {
                     AppNavTab.HOME -> {
@@ -249,7 +252,9 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 onQuickManualSale = { v, item, amt, coach ->
                                     viewModel.recordManualSale(v, item, amt, coach)
                                 },
-                                availableCoaches = availableCoaches
+                                availableCoaches = availableCoaches,
+                                onToggleAvailability = { viewModel.toggleVendorAvailability(it) },
+                                onRejectRequest = { viewModel.customerCancelOrder(it.id) }
                             )
                         } else {
                             TravelerHomeScreen(
@@ -266,7 +271,7 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 selectedRoute = selectedRoute,
                                 locationInfo = locationInfo,
                                 contextState = contextState,
-                                nearbyStation = locationInfo.nearestStation,
+                                nearbyStation = nearbyStation ?: locationInfo.nearestStation,
                                 stationCandidates = stationCandidates,
                                 selectedCandidate = selectedCandidate,
                                 confidenceScore = confidenceScore,
@@ -309,7 +314,11 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 userTravelStatus = userTravelStatus,
                                 locationManagerState = locationManagerState,
                                 onToggleActiveTravel = { viewModel.toggleActiveTravel() },
-                                availableCoaches = availableCoaches
+                                availableCoaches = availableCoaches,
+                                userName = activeVendor?.name ?: "Kailash Kumar",
+                                allStations = allApiStations,
+                                onSelectStationCode = { viewModel.selectStationByCode(it) },
+                                onNavigateToTab = { viewModel.setNavTab(it) }
                             )
                         }
                     }
@@ -404,6 +413,33 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                         }
                     )
                 }
+
+                // Global Interactive User Guidance Modal
+                UserGuidanceModal(
+                    isOpen = showGlobalUserGuide,
+                    onDismiss = { showGlobalUserGuide = false },
+                    initialAudience = if (currentRole == UserRole.VENDOR) {
+                        UserGuideAudience.SUBURBAN_VENDOR
+                    } else {
+                        UserGuideAudience.PUBLIC_COMMUTER
+                    }
+                )
+
+                // Global Notifications Center Dialog
+                NotificationsDialog(
+                    isOpen = showGlobalNotifications,
+                    onDismiss = { showGlobalNotifications = false }
+                )
+
+                // Floating Liquid Frosted Glass Navigation Bar
+                RailBottomNavBar(
+                    activeTab = activeNavTab,
+                    onTabSelected = { viewModel.setNavTab(it) },
+                    language = currentLanguage,
+                    role = currentRole,
+                    isSeniorMode = isSeniorMode,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
             }
         }
     }

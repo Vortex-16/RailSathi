@@ -1,6 +1,7 @@
 package com.example.data.local
 
 import androidx.room.Entity
+import androidx.room.Index
 import androidx.room.PrimaryKey
 
 @Entity(tableName = "users")
@@ -17,7 +18,16 @@ data class UserEntity(
     val sessionToken: String = ""
 )
 
-@Entity(tableName = "food_requests")
+@Entity(
+    tableName = "food_requests",
+    indices = [
+        Index(value = ["status"]),
+        Index(value = ["trainNumber", "coachNumber"]),
+        Index(value = ["assignedVendorId"]),
+        Index(value = ["clientRequestId"]),
+        Index(value = ["targetStationCode"])
+    ]
+)
 data class FoodRequestEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val clientRequestId: String = "",
@@ -37,10 +47,22 @@ data class FoodRequestEntity(
     val expiresAt: Long = System.currentTimeMillis() + 5 * 60 * 1000,
     val assignedVendorId: String? = null,
     val assignedVendorName: String? = null,
-    val isDeliveredPaid: Boolean = false
+    val isDeliveredPaid: Boolean = false,
+    val targetStationCode: String = "",
+    val targetStationName: String = "",
+    val trainInstanceId: String = "",
+    val operatingDate: String = ""
 )
 
-@Entity(tableName = "orders")
+@Entity(
+    tableName = "orders",
+    indices = [
+        Index(value = ["status"]),
+        Index(value = ["vendorId"]),
+        Index(value = ["customerId"]),
+        Index(value = ["requestId"])
+    ]
+)
 data class OrderEntity(
     @PrimaryKey val orderId: String,
     val clientOrderId: String,
@@ -56,7 +78,10 @@ data class OrderEntity(
     val status: String = "CUSTOMER_CONFIRMED",
     val paymentStatus: String = "PENDING",
     val createdAt: Long = System.currentTimeMillis(),
-    val completedAt: Long? = null
+    val completedAt: Long? = null,
+    val targetStationCode: String = "",
+    val trainInstanceId: String = "",
+    val operatingDate: String = ""
 )
 
 @Entity(tableName = "sync_queue")
@@ -69,7 +94,12 @@ data class SyncQueueEntity(
     val retryCount: Int = 0
 )
 
-@Entity(tableName = "vendors")
+@Entity(
+    tableName = "vendors",
+    indices = [
+        Index(value = ["isOnline", "currentTrain"])
+    ]
+)
 data class VendorEntity(
     @PrimaryKey val vendorId: String,
     val name: String,

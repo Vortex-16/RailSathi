@@ -2,28 +2,40 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Clean, natural, earthy Indian palette (No neon, high accessibility)
-val RailNavy = Color(0xFF1E3A8A)         // Deep Rail Navy Primary
-val RailNavyLight = Color(0xFF3B82F6)    // Secondary highlight
-val RailNavyDark = Color(0xFF0F172A)     // Text / Surface Dark
+// ==========================================
+// Textla — Sunlit Retro Botanical Almanac Palette
+// ==========================================
+val SunlitCream = Color(0xFFF2EE98)        // Page canvas & base background
+val ForestInk = Color(0xFF10380B)          // Primary ink, text, borders, hard offset shadows
+val Marigold = Color(0xFFFCE519)           // Yellow state accent, badges, star ratings, hero CTA
+val SageWash = Color(0xFFDBE8AC)           // Soft botanical green surface tint
+val VividFern = Color(0xFF30BE60)          // Green outline accent for tags & active status
+val Parchment = Color(0xFFFEFDE6)          // Lighter card surface sitting above Sunlit Cream
+val Snowcap = Color(0xFFFFFFFF)            // Pure white for crisp contrast inside cards
 
-val TerracottaAmber = Color(0xFFC2410C) // Earthy Chai/Terracotta
-val TerracottaLight = Color(0xFFFB923C)
-val TerracottaDark = Color(0xFF7C2D12)
+// Semantic Mappings for RailSathi & Jetpack Compose
+val RailNavy = ForestInk                   // Deep Forest Ink brand primary
+val RailNavyLight = Color(0xFF1E5E16)      // Lighter forest ink tone
+val RailNavyDark = Color(0xFF081C05)       // Deepest forest ink
 
-val NatureGreen = Color(0xFF15803D)     // Pure Veg / Available Green
-val NatureGreenLight = Color(0xFFDCFCE7)
-val NatureGreenDark = Color(0xFF14532D)
+val TerracottaAmber = Marigold             // Marigold vibrant accent
+val TerracottaLight = Color(0xFFFFF066)
+val TerracottaDark = Color(0xFFB8A200)
 
-val WarmSandBackground = Color(0xFFFAF9F6) // Warm off-white, comfortable on eyes
-val WarmSurface = Color(0xFFFFFFFF)
-val WarmSurfaceVariant = Color(0xFFF1F5F9)
-val WarmBorder = Color(0xFFE2E8F0)
+val NatureGreen = VividFern                // Vivid Fern for live status & pure veg
+val NatureGreenLight = SageWash
+val NatureGreenDark = ForestInk
 
-val CharcoalText = Color(0xFF1E293B)    // High contrast readable text
-val CharcoalTextMuted = Color(0xFF64748B)
+val WarmSandBackground = SunlitCream       // Canvas is Sunlit Cream (#F2EE98)
+val WarmSurface = Parchment                // Elevated card surface is Parchment (#FEFDE6)
+val WarmSurfaceVariant = SageWash          // Sage Wash (#DBE8AC) for subtle panels
+val WarmBorder = ForestInk                 // Hard printed ink borders
+
+val CharcoalText = ForestInk               // Forest Ink for high-contrast ink typography
+val CharcoalTextMuted = Color(0xFF26541E)  // Muted forest ink tone
 
 val AlertRed = Color(0xFFB91C1C)
 val AlertRedLight = Color(0xFFFEE2E2)
-val GoldYellow = Color(0xFFD97706)
-val GoldYellowLight = Color(0xFFFEF3C7)
+val GoldYellow = Marigold
+val GoldYellowLight = Color(0xFFFFF8B3)
+

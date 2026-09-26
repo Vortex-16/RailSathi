@@ -209,6 +209,19 @@ class TrainContextEngine(
         }
     }
 
+    fun loadStationBoard(station: RailwayStation) {
+        scope.launch {
+            _nearbyStation.value = station
+            val report = railwayDataProvider.getStationDeparturesReport(station.code)
+            _stationCandidates.value = report.upcomingTrains
+            _filteredDepartedTrains.value = report.filteredDepartedTrains
+            _currentIstTime.value = report.currentIstTimeFormatted
+            if (_contextState.value != TrainContextState.ACTIVE_JOURNEY && _selectedCandidate.value == null) {
+                _contextState.value = TrainContextState.NEAR_STATION
+            }
+        }
+    }
+
     fun selectCandidateTrain(candidate: TrainCandidate) {
         _selectedCandidate.value = candidate
         _contextState.value = TrainContextState.AWAITING_CONFIRMATION

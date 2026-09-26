@@ -1,6 +1,7 @@
 package com.example.data.repository
 
 import android.content.Context
+import androidx.room.withTransaction
 import com.example.AppConfig
 import com.example.data.local.AppDatabase
 import com.example.data.local.ExpenseEntity
@@ -12,6 +13,7 @@ import com.example.data.local.VendorEntity
 import com.example.data.model.FoodItem
 import com.example.data.model.IndianLocalRailwayDatabase
 import com.example.data.model.OrderStatus
+import com.example.data.model.UserRole
 import com.example.data.nearby.NearbyConnectionsManager
 import com.example.data.remote.AcceptRequestPayload
 import com.example.data.remote.ApiClient
@@ -68,6 +70,8 @@ class RailSathiRepository(
 
     val syncManager = SyncManager(db)
     val nearbyManager = context?.let { NearbyConnectionsManager(it) }
+    val matchingService = com.example.data.engine.HawkerMatchingService(db)
+    val notificationWorker = com.example.data.engine.OrderNotificationWorker(db, matchingService)
 
     // Dynamic routes loaded from local Room DB, updating reactively
     val availableRoutesFlow: Flow<List<TrainRouteDetails>> = trainDao.getAllTrains().map { dbList ->
@@ -228,6 +232,22 @@ class RailSathiRepository(
         }
     }
 
+    // Role Verification & Backend Authorization
+    @Volatile
+    private var verifiedRole: UserRole = UserRole.TRAVELER
+
+    fun setVerifiedRole(role: UserRole) {
+        verifiedRole = role
+    }
+
+    fun getVerifiedRole(): UserRole = verifiedRole
+
+    fun ensureRole(required: UserRole, operationName: String) {
+        if (verifiedRole != required) {
+            throw SecurityException("Unauthorized: Operation '$operationName' requires $required role, but current verified role is $verifiedRole.")
+        }
+    }
+
     // User Profile
     val activeUserFlow: Flow<UserEntity?> = userDao.getActiveUser()
 
@@ -256,46 +276,40 @@ class RailSathiRepository(
         seatDetail: String,
         foodItem: FoodItem,
         quantity: Int = 1,
-        note: String = ""
+        note: String = "",
+        targetStationCode: String = "",
+        targetStationName: String = "",
+        customClientRequestId: String? = null
     ): FoodRequestEntity = withContext(Dispatchers.IO) {
-        val clientRequestId = "req_${UUID.randomUUID()}"
+        ensureRole(UserRole.TRAVELER, "createAndDispatchFoodRequest")
+        val clientRequestId = customClientRequestId ?: "req_${UUID.randomUUID()}"
         val validQty = quantity.coerceIn(1, AppConfig.MAX_ITEM_QUANTITY)
+        val normalizedCoach = matchingService.normalizeCoach(coachNumber)
+        val trainInstanceId = matchingService.buildTrainInstanceId(trainNumber, "")
 
-        val coachVendors = db.vendorDao().getVendorsInCoach(trainNumber, coachNumber)
-        val trainVendors = db.vendorDao().getVendorsInTrain(trainNumber)
-
-        // Prioritize:
-        // 1. Online vendors in this coach specializing in this item
-        // 2. Online vendors on this train specializing in this item
-        // 3. Online vendors in this coach
-        // 4. Any online vendor on this train
-        val eligibleVendors = when {
-            coachVendors.any { it.specialityItemId == foodItem.id && it.isOnline } ->
-                coachVendors.filter { it.specialityItemId == foodItem.id && it.isOnline }
-            trainVendors.any { it.specialityItemId == foodItem.id && it.isOnline } ->
-                trainVendors.filter { it.specialityItemId == foodItem.id && it.isOnline }
-            coachVendors.any { it.isOnline } ->
-                coachVendors.filter { it.isOnline }
-            trainVendors.any { it.isOnline } ->
-                trainVendors.filter { it.isOnline }
-            else -> emptyList()
+        // Idempotency check (Test A-08: retry does not create duplicate order)
+        val existing = foodRequestDao.getRequestByClientId(clientRequestId)
+        if (existing != null) {
+            return@withContext existing
         }
 
-        // Fair income score
-        val bestVendor = eligibleVendors.minByOrNull { vendor ->
-            val salesScore = vendor.todaySalesCount * 10
-            val recencyPenalty = if (vendor.lastSaleTimestamp > 0) {
-                ((System.currentTimeMillis() - vendor.lastSaleTimestamp) / 60000).toInt()
-            } else 999
-            salesScore - recencyPenalty
-        }
+        // Find eligible vendors using the matching service
+        val criteria = com.example.data.engine.HawkerEligibilityCriteria(
+            trainNumber = trainNumber,
+            targetCoach = normalizedCoach,
+            targetStationCode = targetStationCode,
+            foodItemId = foodItem.id,
+            strictCoachScoping = true
+        )
+        val eligibleVendors = matchingService.findEligibleVendors(criteria)
+        val bestVendor = eligibleVendors.firstOrNull()
 
         val request = FoodRequestEntity(
             clientRequestId = clientRequestId,
-            passengerName = passengerName.ifBlank { "Traveler in $coachNumber" },
+            passengerName = passengerName.ifBlank { "Traveler in $normalizedCoach" },
             trainNumber = trainNumber,
             trainName = trainName,
-            coachNumber = coachNumber,
+            coachNumber = normalizedCoach,
             seatDetail = seatDetail,
             foodItemId = foodItem.id,
             foodItemName = foodItem.nameEn,
@@ -306,7 +320,10 @@ class RailSathiRepository(
             status = if (bestVendor != null) OrderStatus.OFFERED_TO_VENDOR.name else OrderStatus.REQUESTED.name,
             timestamp = System.currentTimeMillis(),
             assignedVendorId = bestVendor?.vendorId,
-            assignedVendorName = bestVendor?.name
+            assignedVendorName = bestVendor?.name,
+            targetStationCode = targetStationCode,
+            targetStationName = targetStationName,
+            trainInstanceId = trainInstanceId
         )
 
         val insertedId = foodRequestDao.insertRequest(request)
@@ -319,7 +336,7 @@ class RailSathiRepository(
                 customerId = passengerName,
                 journeyId = "active_journey",
                 trainNumber = trainNumber,
-                coachNumber = coachNumber,
+                coachNumber = normalizedCoach,
                 foodItemId = foodItem.id,
                 foodItemName = foodItem.nameEn,
                 quantity = validQty,
@@ -332,7 +349,7 @@ class RailSathiRepository(
                 put("clientRequestId", clientRequestId)
                 put("passengerName", passengerName)
                 put("trainNumber", trainNumber)
-                put("coachNumber", coachNumber)
+                put("coachNumber", normalizedCoach)
                 put("foodItemId", foodItem.id)
                 put("foodItemName", foodItem.nameEn)
                 put("quantity", validQty)
@@ -340,34 +357,72 @@ class RailSathiRepository(
             syncManager.queueOfflineOperation(clientRequestId, "CREATE_REQUEST", jsonObj)
         }
 
+        // Dispatch scoped notification through notification worker (Scenario B & C)
+        notificationWorker.dispatchOrderNotification(insertedRequest)
+
         // Broadcast to P2P Nearby Connections
         nearbyManager?.broadcastLocalFoodRequest(
             requestId = insertedId.toString(),
             foodItemId = foodItem.id,
             foodItemName = foodItem.nameEn,
             quantity = validQty,
-            coach = coachNumber,
+            coach = normalizedCoach,
             deviceId = passengerName
         )
 
         insertedRequest
     }
 
+    // Change selected coach before acceptance (Scenario B Tests 7-10)
+    suspend fun changeCoach(requestId: Long, newCoach: String): com.example.data.engine.CoachChangeResult {
+        ensureRole(UserRole.TRAVELER, "changeCoach")
+        return matchingService.changeCoach(requestId, newCoach)
+    }
+
     // Vendor Accepts Request and Chooses Unit Price from ALLOWED_UNIT_PRICES
+    // Scenario A (Test A-05): Atomic claim ensures only one vendor claims successfully
     suspend fun vendorAcceptAndOfferPrice(
         requestId: Long,
         vendorId: String,
         unitPrice: Int
     ) = withContext(Dispatchers.IO) {
+        ensureRole(UserRole.VENDOR, "vendorAcceptAndOfferPrice")
+        val vendor = vendorDao.getVendorByIdDirect(vendorId)
+        if (vendor != null && !vendor.isOnline) {
+            throw IllegalStateException("Vendor is currently marked as Not Available. Set status to Available before accepting orders.")
+        }
         if (!AppConfig.ALLOWED_UNIT_PRICES.contains(unitPrice)) {
             throw IllegalArgumentException("Unit price ₹$unitPrice is not allowed.")
         }
 
         val request = foodRequestDao.getRequestById(requestId) ?: return@withContext
-        val totalPrice = request.quantity * unitPrice
+        val currentStatus = try {
+            OrderStatus.valueOf(request.status)
+        } catch (_: Exception) {
+            OrderStatus.REQUESTED
+        }
 
-        foodRequestDao.updatePriceConfirmation(requestId, unitPrice, totalPrice)
-        foodRequestDao.updateRequestStatus(requestId, OrderStatus.PRICE_CONFIRMED.name, vendorId, "Vendor Accepted")
+        // State machine transition validation
+        if (com.example.data.engine.OrderStateMachine.isTerminal(currentStatus)) {
+            throw IllegalStateException("Cannot accept request in terminal status $currentStatus")
+        }
+
+        // Atomic vendor claim in database
+        val claimResult = matchingService.claimOrder(
+            requestId = requestId,
+            vendorId = vendorId,
+            vendorName = "Vendor Accepted"
+        )
+
+        if (claimResult is com.example.data.engine.ClaimResult.AlreadyClaimed && claimResult.currentVendorId != vendorId) {
+            throw IllegalStateException("Order was already claimed by another vendor (${claimResult.currentVendorId}).")
+        }
+
+        val totalPrice = request.quantity * unitPrice
+        db.withTransaction {
+            foodRequestDao.updatePriceConfirmation(requestId, unitPrice, totalPrice)
+            foodRequestDao.updateRequestStatus(requestId, OrderStatus.PRICE_CONFIRMED.name, vendorId, "Vendor Accepted")
+        }
 
         // Sync to cloud
         try {
@@ -395,14 +450,21 @@ class RailSathiRepository(
         )
     }
 
+    suspend fun rejectFoodRequest(requestId: Long, vendorId: String) = withContext(Dispatchers.IO) {
+        ensureRole(UserRole.VENDOR, "rejectFoodRequest")
+        val request = foodRequestDao.getRequestById(requestId) ?: return@withContext
+        if (request.assignedVendorId == null || request.assignedVendorId == vendorId) {
+            foodRequestDao.updateRequestStatus(requestId, OrderStatus.REJECTED.name, null, null)
+        }
+    }
+
     // Customer Confirms the Order after seeing the vendor price
     suspend fun customerConfirmOrder(
         requestId: Long,
         customerId: String
     ) = withContext(Dispatchers.IO) {
+        ensureRole(UserRole.TRAVELER, "customerConfirmOrder")
         val request = foodRequestDao.getRequestById(requestId) ?: return@withContext
-        foodRequestDao.confirmOrderByCustomer(requestId)
-
         val orderId = "ord_${UUID.randomUUID()}"
         val order = OrderEntity(
             orderId = orderId,
@@ -418,7 +480,11 @@ class RailSathiRepository(
             totalPrice = request.calculatedTotalPrice ?: (request.quantity * 15),
             status = OrderStatus.CUSTOMER_CONFIRMED.name
         )
-        orderDao.insertOrder(order)
+
+        db.withTransaction {
+            foodRequestDao.confirmOrderByCustomer(requestId)
+            orderDao.insertOrder(order)
+        }
 
         try {
             ApiClient.apiService.confirmOrder(requestId.toString(), ConfirmOrderPayload(customerId))
@@ -481,7 +547,13 @@ class RailSathiRepository(
     }
 
     suspend fun updateVendorCoach(vendorId: String, coachNumber: String) = withContext(Dispatchers.IO) {
+        ensureRole(UserRole.VENDOR, "updateVendorCoach")
         vendorDao.updateVendorCoach(vendorId, coachNumber)
+    }
+
+    suspend fun setVendorAvailability(vendorId: String, isOnline: Boolean) = withContext(Dispatchers.IO) {
+        ensureRole(UserRole.VENDOR, "setVendorAvailability")
+        vendorDao.updateVendorOnlineStatus(vendorId, isOnline)
     }
 
     suspend fun completeDeliveryAndRecordSale(
@@ -493,43 +565,47 @@ class RailSathiRepository(
         trainNumber: String,
         buyerName: String
     ) = withContext(Dispatchers.IO) {
+        ensureRole(UserRole.VENDOR, "completeDeliveryAndRecordSale")
         val now = System.currentTimeMillis()
         val dateString = SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).format(Date(now))
 
-        if (requestId > 0) {
-            foodRequestDao.updateRequestStatus(requestId, OrderStatus.COMPLETED.name, vendorId, "Delivered by Vendor")
+        db.withTransaction {
+            if (requestId > 0) {
+                foodRequestDao.updateRequestStatus(requestId, OrderStatus.COMPLETED.name, vendorId, "Delivered by Vendor")
+            }
+
+            // Record Vendor Sale
+            vendorDao.recordVendorSale(vendorId, amount, now)
+            saleRecordDao.insertSaleRecord(
+                SaleRecordEntity(
+                    vendorId = vendorId,
+                    foodItemName = foodItemName,
+                    amount = amount,
+                    coachNumber = coachNumber,
+                    trainNumber = trainNumber,
+                    timestamp = now,
+                    dateString = dateString
+                )
+            )
+
+            // Record Passenger Expense
+            expenseDao.insertExpense(
+                ExpenseEntity(
+                    title = "$foodItemName ($coachNumber)",
+                    category = "Train Snacks",
+                    amount = amount,
+                    timestamp = now,
+                    dateString = dateString,
+                    coach = coachNumber,
+                    trainNumber = trainNumber,
+                    note = "Served fresh by vendor in local train"
+                )
+            )
         }
-
-        // Record Vendor Sale
-        vendorDao.recordVendorSale(vendorId, amount, now)
-        saleRecordDao.insertSaleRecord(
-            SaleRecordEntity(
-                vendorId = vendorId,
-                foodItemName = foodItemName,
-                amount = amount,
-                coachNumber = coachNumber,
-                trainNumber = trainNumber,
-                timestamp = now,
-                dateString = dateString
-            )
-        )
-
-        // Record Passenger Expense
-        expenseDao.insertExpense(
-            ExpenseEntity(
-                title = "$foodItemName ($coachNumber)",
-                category = "Train Snacks",
-                amount = amount,
-                timestamp = now,
-                dateString = dateString,
-                coach = coachNumber,
-                trainNumber = trainNumber,
-                note = "Served fresh by vendor in local train"
-            )
-        )
     }
 
     suspend fun cancelRequest(requestId: Long) = withContext(Dispatchers.IO) {
+        ensureRole(UserRole.TRAVELER, "cancelRequest")
         foodRequestDao.updateRequestStatus(requestId, OrderStatus.CUSTOMER_CANCELLED.name, null, null)
     }
 

@@ -13,41 +13,48 @@ import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme =
   darkColorScheme(
-    primary = RailNavyLight,
-    onPrimary = Color.White,
-    secondary = TerracottaLight,
-    onSecondary = Color.White,
-    tertiary = NatureGreenLight,
-    background = Color(0xFF0F172A),
-    surface = Color(0xFF1E293B),
-    onBackground = Color(0xFFF8FAFC),
-    onSurface = Color(0xFFF8FAFC),
-    surfaceVariant = Color(0xFF334155),
-    onSurfaceVariant = Color(0xFFCBD5E1),
-    outline = Color(0xFF475569)
+    primary = ForestInk,
+    onPrimary = SunlitCream,
+    primaryContainer = SageWash,
+    onPrimaryContainer = ForestInk,
+    secondary = Marigold,
+    onSecondary = ForestInk,
+    secondaryContainer = SageWash,
+    onSecondaryContainer = ForestInk,
+    tertiary = VividFern,
+    onTertiary = ForestInk,
+    tertiaryContainer = SageWash,
+    onTertiaryContainer = ForestInk,
+    background = SunlitCream,
+    surface = Parchment,
+    onBackground = ForestInk,
+    onSurface = ForestInk,
+    surfaceVariant = SageWash,
+    onSurfaceVariant = CharcoalTextMuted,
+    outline = ForestInk
   )
 
 private val LightColorScheme =
   lightColorScheme(
-    primary = RailNavy,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFDBEAFE),
-    onPrimaryContainer = RailNavyDark,
-    secondary = TerracottaAmber,
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFFFFEDD5),
-    onSecondaryContainer = TerracottaDark,
-    tertiary = NatureGreen,
-    onTertiary = Color.White,
-    tertiaryContainer = NatureGreenLight,
-    onTertiaryContainer = NatureGreenDark,
-    background = WarmSandBackground,
-    surface = WarmSurface,
-    onBackground = CharcoalText,
-    onSurface = CharcoalText,
-    surfaceVariant = WarmSurfaceVariant,
+    primary = ForestInk,
+    onPrimary = SunlitCream,
+    primaryContainer = SageWash,
+    onPrimaryContainer = ForestInk,
+    secondary = Marigold,
+    onSecondary = ForestInk,
+    secondaryContainer = SageWash,
+    onSecondaryContainer = ForestInk,
+    tertiary = VividFern,
+    onTertiary = ForestInk,
+    tertiaryContainer = SageWash,
+    onTertiaryContainer = ForestInk,
+    background = SunlitCream,
+    surface = Parchment,
+    onBackground = ForestInk,
+    onSurface = ForestInk,
+    surfaceVariant = SageWash,
     onSurfaceVariant = CharcoalTextMuted,
-    outline = WarmBorder
+    outline = ForestInk
   )
 
 @Composable

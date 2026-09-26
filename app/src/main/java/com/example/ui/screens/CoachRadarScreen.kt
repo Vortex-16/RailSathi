@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -51,11 +52,17 @@ import com.example.data.model.CoachType
 import com.example.data.model.IndianLanguage
 import com.example.data.model.UserRole
 import com.example.data.repository.TrainRouteDetails
+import com.example.ui.theme.ForestPillButton
+import com.example.ui.theme.MarigoldPillButton
+import com.example.ui.theme.SunlitStampedCard
 import com.example.ui.theme.CharcoalText
 import com.example.ui.theme.CharcoalTextMuted
+import com.example.ui.theme.ForestInk
+import com.example.ui.theme.Marigold
 import com.example.ui.theme.NatureGreen
-import com.example.ui.theme.NatureGreenLight
+import com.example.ui.theme.Parchment
 import com.example.ui.theme.RailNavy
+import com.example.ui.theme.SunlitCream
 import com.example.ui.theme.TerracottaAmber
 import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmSandBackground
@@ -77,7 +84,7 @@ fun CoachRadarScreen(
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = WarmSandBackground
+        color = SunlitCream
     ) {
         LazyColumn(
             modifier = Modifier
@@ -89,11 +96,11 @@ fun CoachRadarScreen(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Train Header Overview
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 5.dp
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -105,27 +112,29 @@ fun CoachRadarScreen(
                                 Text(
                                     text = "Authentic EMU Rake Formation & Radar",
                                     fontSize = if (isSeniorMode) 18.sp else 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = RailNavy
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                                 Text(
                                     text = "${selectedRoute?.trainName ?: "Standard 9-Car Suburban EMU Rake"} • Eastern Railway",
                                     fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
                                     color = CharcoalTextMuted
                                 )
                             }
 
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFFDBEAFE))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    .clip(RoundedCornerShape(1440.dp))
+                                    .background(Marigold)
+                                    .border(BorderStroke(1.5.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
                                 Text(
                                     text = "Selected: $selectedCoach",
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = RailNavy
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                             }
                         }
@@ -133,25 +142,27 @@ fun CoachRadarScreen(
                         Spacer(modifier = Modifier.height(10.dp))
 
                         // Collision Guard policy badge
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = NatureGreenLight),
-                            shape = RoundedCornerShape(8.dp)
+                        SunlitStampedCard(
+                            containerColor = SunlitCream,
+                            borderColor = ForestInk,
+                            shadowOffset = 3.dp
                         ) {
                             Row(
-                                modifier = Modifier.padding(10.dp),
+                                modifier = Modifier.padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Shield,
                                     contentDescription = "Collision Policy",
-                                    tint = NatureGreen,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = ForestInk,
+                                    modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Collision Policy: Different snack vendors (e.g. Jhalmuri + Chai) can share a coach. Same-item vendors are routed to alternative coaches to protect income.",
                                     fontSize = 11.sp,
-                                    color = CharcoalText
+                                    fontWeight = FontWeight.Medium,
+                                    color = ForestInk
                                 )
                             }
                         }
@@ -164,8 +175,8 @@ fun CoachRadarScreen(
                 Text(
                     text = "EMU Rake Coach Sequence (Engine ➔ Rear)",
                     fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CharcoalText
+                    fontWeight = FontWeight.ExtraBold,
+                    color = ForestInk
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
@@ -175,7 +186,7 @@ fun CoachRadarScreen(
                         .fillMaxWidth()
                         .horizontalScroll(rememberScrollState()),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     emuCoaches.forEach { emuCoach ->
                         val coachCode = emuCoach.coachCode
@@ -183,46 +194,42 @@ fun CoachRadarScreen(
                         val coachVendors = allVendors.filter { it.currentCoach == coachCode }
                         val isSelected = selectedCoach == coachCode
 
-                        val (coachColor, coachIcon) = when (emuCoach.type) {
-                            CoachType.CAB_DIVYANG -> Pair(Color(0xFF334155), Icons.Default.Accessible)
-                            CoachType.LADIES_SPECIAL -> Pair(Color(0xFFBE185D), Icons.Default.Female)
-                            CoachType.VENDOR_LUGGAGE -> Pair(Color(0xFFD97706), Icons.Default.LocalShipping)
-                            CoachType.GENERAL -> Pair(Color(0xFF1E3A8A), Icons.Default.Groups)
+                        val (coachIcon, coachLabel) = when (emuCoach.type) {
+                            CoachType.CAB_DIVYANG -> Pair(Icons.Default.Accessible, "Cab")
+                            CoachType.LADIES_SPECIAL -> Pair(Icons.Default.Female, "Ladies")
+                            CoachType.VENDOR_LUGGAGE -> Pair(Icons.Default.LocalShipping, "Luggage")
+                            CoachType.GENERAL -> Pair(Icons.Default.Groups, "General")
                         }
 
-                        Card(
+                        Box(
                             modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) Marigold else Parchment)
+                                .border(BorderStroke(if (isSelected) 2.5.dp else 1.5.dp, ForestInk), RoundedCornerShape(12.dp))
                                 .clickable { onSelectCoach(coachCode) }
+                                .padding(horizontal = 10.dp, vertical = 8.dp)
                                 .testTag("rake_coach_$coachCode"),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) Color(0xFFDBEAFE) else WarmSurface
-                            ),
-                            border = BorderStroke(
-                                if (isSelected) 2.dp else 1.dp,
-                                if (isSelected) coachColor else WarmBorder
-                            )
+                            contentAlignment = Alignment.Center
                         ) {
                             Column(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(
                                         imageVector = coachIcon,
                                         contentDescription = emuCoach.nameEn,
-                                        tint = coachColor,
+                                        tint = ForestInk,
                                         modifier = Modifier.size(14.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
                                     Text(
                                         text = coachCode,
-                                        fontWeight = FontWeight.Bold,
+                                        fontWeight = FontWeight.ExtraBold,
                                         fontSize = 12.sp,
-                                        color = if (isSelected) coachColor else CharcoalText
+                                        color = ForestInk
                                     )
                                 }
-                                Spacer(modifier = Modifier.height(2.dp))
+                                Spacer(modifier = Modifier.height(3.dp))
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -232,7 +239,8 @@ fun CoachRadarScreen(
                                             modifier = Modifier
                                                 .size(8.dp)
                                                 .clip(CircleShape)
-                                                .background(TerracottaAmber)
+                                                .background(Marigold)
+                                                .border(BorderStroke(1.dp, ForestInk), CircleShape)
                                         )
                                     }
                                     if (coachVendors.isNotEmpty()) {
@@ -240,7 +248,7 @@ fun CoachRadarScreen(
                                             modifier = Modifier
                                                 .size(8.dp)
                                                 .clip(CircleShape)
-                                                .background(NatureGreen)
+                                                .background(ForestInk)
                                         )
                                     }
                                 }
@@ -257,26 +265,21 @@ fun CoachRadarScreen(
                 val coachVendors = allVendors.filter { it.currentCoach == coachCode }
                 val isSelected = selectedCoach == coachCode
 
-                val (badgeColor, badgeTextColor, typeLabel) = when (emuCoach.type) {
-                    CoachType.CAB_DIVYANG -> Triple(Color(0xFF334155), Color.White, "Engine + Divyangjan (দিব্যাঙ্গ)")
-                    CoachType.LADIES_SPECIAL -> Triple(Color(0xFFFCE7F3), Color(0xFF9D174D), "Ladies Special (মহিলা কামরা)")
-                    CoachType.VENDOR_LUGGAGE -> Triple(Color(0xFFFEF3C7), Color(0xFFB45309), "Hawker & Luggage (সবজি/হকার डिब्बा)")
-                    CoachType.GENERAL -> Triple(Color(0xFFDBEAFE), Color(0xFF1E40AF), "General Passenger (সাধারণ)")
+                val typeLabel = when (emuCoach.type) {
+                    CoachType.CAB_DIVYANG -> "Engine + Divyangjan (দিব্যাঙ্গ)"
+                    CoachType.LADIES_SPECIAL -> "Ladies Special (মহিলা কামরা)"
+                    CoachType.VENDOR_LUGGAGE -> "Hawker & Luggage (সবজি/হকার डिब्बा)"
+                    CoachType.GENERAL -> "General Passenger (সাধারণ)"
                 }
 
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onSelectCoach(coachCode) }
                         .testTag("coach_card_$coachCode"),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isSelected) Color(0xFFF0FDF4) else WarmSurface
-                    ),
-                    border = BorderStroke(
-                        if (isSelected) 1.5.dp else 1.dp,
-                        if (isSelected) NatureGreen else WarmBorder
-                    )
+                    containerColor = if (isSelected) Marigold else Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = if (isSelected) 6.dp else 4.dp
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(
@@ -290,14 +293,14 @@ fun CoachRadarScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(RailNavy)
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .clip(RoundedCornerShape(1440.dp))
+                                        .background(ForestInk)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
                                     Text(
                                         text = coachCode,
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold,
+                                        color = SunlitCream,
+                                        fontWeight = FontWeight.ExtraBold,
                                         fontSize = if (isSeniorMode) 15.sp else 13.sp
                                     )
                                 }
@@ -306,28 +309,25 @@ fun CoachRadarScreen(
 
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(badgeColor)
-                                        .padding(horizontal = 6.dp, vertical = 3.dp)
+                                        .clip(RoundedCornerShape(1440.dp))
+                                        .background(SunlitCream)
+                                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                        .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
                                     Text(
                                         text = typeLabel,
-                                        color = badgeTextColor,
+                                        color = ForestInk,
                                         fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.ExtraBold
                                     )
                                 }
                             }
 
                             if (role == UserRole.VENDOR && emuCoach.isVendorAllowed) {
-                                Button(
+                                ForestPillButton(
                                     onClick = { onVendorBoardCoach(coachCode) },
-                                    colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.heightIn(min = 34.dp)
-                                ) {
-                                    Text("Board $coachCode", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
+                                    text = "Board $coachCode"
+                                )
                             }
                         }
 
@@ -340,26 +340,28 @@ fun CoachRadarScreen(
                                 else -> emuCoach.nameEn
                             } + " • " + emuCoach.description,
                             fontSize = 11.sp,
-                            color = CharcoalTextMuted
+                            fontWeight = FontWeight.Medium,
+                            color = ForestInk.copy(alpha = 0.8f)
                         )
 
                         Spacer(modifier = Modifier.height(8.dp))
 
                         // Active Hunger Signals
                         if (coachRequests.isNotEmpty()) {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF3C7)),
-                                shape = RoundedCornerShape(6.dp)
+                            SunlitStampedCard(
+                                containerColor = SunlitCream,
+                                borderColor = ForestInk,
+                                shadowOffset = 3.dp
                             ) {
                                 Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
                                         text = "⚡ ${coachRequests.size} Active Food Request(s): " + coachRequests.joinToString { it.foodItemName },
-                                        color = Color(0xFF92400E),
+                                        color = ForestInk,
                                         fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.ExtraBold
                                     )
                                 }
                             }
@@ -371,8 +373,8 @@ fun CoachRadarScreen(
                             Text(
                                 text = "Vendors in $coachCode:",
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = CharcoalText
+                                fontWeight = FontWeight.ExtraBold,
+                                color = ForestInk
                             )
                             Spacer(modifier = Modifier.height(4.dp))
                             coachVendors.forEach { v ->
@@ -383,14 +385,15 @@ fun CoachRadarScreen(
                                     Icon(
                                         imageVector = Icons.Default.Storefront,
                                         contentDescription = "Vendor",
-                                        tint = NatureGreen,
+                                        tint = ForestInk,
                                         modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = "${v.name} (${v.specialityItemName}) • ${v.todaySalesCount} sales today",
                                         fontSize = 12.sp,
-                                        color = CharcoalText
+                                        fontWeight = FontWeight.Medium,
+                                        color = ForestInk
                                     )
                                 }
                             }
@@ -398,8 +401,8 @@ fun CoachRadarScreen(
                             Text(
                                 text = if (emuCoach.isVendorAllowed) "No vendor in $coachCode right now. Open for business!" else "Hawkers restricted in Cab coach.",
                                 fontSize = 11.sp,
-                                color = if (emuCoach.isVendorAllowed) NatureGreen else CharcoalTextMuted,
-                                fontWeight = FontWeight.Medium
+                                color = if (emuCoach.isVendorAllowed) ForestInk else CharcoalTextMuted,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -407,7 +410,7 @@ fun CoachRadarScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(96.dp))
             }
         }
     }

@@ -8,6 +8,7 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,6 +67,19 @@ import kotlinx.coroutines.launch
 import com.example.data.auth.AuthManager
 import com.example.data.model.IndianLanguage
 import com.example.data.model.UserRole
+import com.example.ui.theme.BotanicalStarRating
+import com.example.ui.theme.ForestInk
+import com.example.ui.theme.ForestPillButton
+import com.example.ui.theme.Marigold
+import com.example.ui.theme.MarigoldPillButton
+import com.example.ui.theme.OutlinedPillButton
+import com.example.ui.theme.Parchment
+import com.example.ui.theme.SageWash
+import com.example.ui.theme.SunlitCardShape
+import com.example.ui.theme.SunlitCream
+import com.example.ui.theme.SunlitPillShape
+import com.example.ui.theme.SunlitStampedCard
+import com.example.ui.theme.VividFern
 import com.example.ui.theme.CharcoalText
 import com.example.ui.theme.CharcoalTextMuted
 import com.example.ui.theme.RailNavy
@@ -194,43 +208,27 @@ fun OnboardingAuthScreen(
             ) {
                 when (currentStep) {
                     1 -> {
-                        Button(
+                        ForestPillButton(
                             onClick = { currentStep = 2 },
+                            text = "Continue",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp)
-                                .testTag("onboarding_step1_continue"),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = RailNavy)
-                        ) {
-                            Text(
-                                text = "Continue",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
+                                .height(54.dp)
+                                .testTag("onboarding_step1_continue")
+                        )
                     }
                     2 -> {
-                        Button(
+                        ForestPillButton(
                             onClick = {
                                 onLanguageSelect(selectedLang)
                                 currentStep = 3
                             },
+                            text = "Continue with ${selectedLang.englishName}",
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(52.dp)
-                                .testTag("onboarding_step2_continue"),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = RailNavy)
-                        ) {
-                            Text(
-                                text = "Continue with ${selectedLang.englishName}",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
+                                .height(54.dp)
+                                .testTag("onboarding_step2_continue")
+                        )
                     }
                     3 -> {
                         // Screen 3 contains its own primary Google sign-in actions
@@ -256,33 +254,30 @@ private fun Screen1Introduction() {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Clean, Minimalist Brand Emblem
+        // Textla Botanical Emblem: Sunlit Stamped Emblem with Forest Ink border
         Box(
             modifier = Modifier
-                .size(80.dp)
-                .clip(RoundedCornerShape(22.dp))
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(RailNavy, Color(0xFF0F172A))
-                    )
-                ),
+                .size(88.dp)
+                .clip(CircleShape)
+                .background(Marigold)
+                .border(BorderStroke(2.dp, ForestInk), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.DirectionsTransit,
                 contentDescription = "RailSathi Logo",
-                tint = Color.White,
-                modifier = Modifier.size(42.dp)
+                tint = ForestInk,
+                modifier = Modifier.size(46.dp)
             )
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(18.dp))
 
         Text(
             text = "RailSathi",
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Bold,
-            color = RailNavy,
+            fontSize = 36.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = ForestInk,
             textAlign = TextAlign.Center
         )
 
@@ -291,40 +286,57 @@ private fun Screen1Introduction() {
         Text(
             text = "Your journey, made easier.",
             fontSize = 17.sp,
-            fontWeight = FontWeight.Medium,
+            fontWeight = FontWeight.SemiBold,
             color = CharcoalTextMuted,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(32.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-        Card(
+        // Textla 5-Star Social Proof Row
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            BotanicalStarRating(rating = 5)
+            Text(
+                text = "Trusted by Daily Commuters",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = ForestInk
+            )
+        }
+
+        Spacer(modifier = Modifier.height(26.dp))
+
+        // Textla Stamped Card with 6.dp hard offset shadow in Forest Ink
+        SunlitStampedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = WarmSurface),
-            border = BorderStroke(1.dp, WarmBorder)
+            containerColor = Parchment,
+            borderColor = ForestInk,
+            shadowOffset = 6.dp
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                    .padding(horizontal = 20.dp, vertical = 22.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 IntroFeatureRow(
                     icon = Icons.Default.DirectionsTransit,
-                    iconTint = RailNavy,
+                    iconTint = ForestInk,
                     text = "Find your train and platform."
                 )
 
                 IntroFeatureRow(
                     icon = Icons.Default.Fastfood,
-                    iconTint = TerracottaAmber,
+                    iconTint = ForestInk,
                     text = "Discover fresh local station food."
                 )
 
                 IntroFeatureRow(
                     icon = Icons.Default.Storefront,
-                    iconTint = Color(0xFF16A34A),
+                    iconTint = ForestInk,
                     text = "Connect directly with nearby vendors."
                 )
             }
@@ -344,15 +356,16 @@ private fun IntroFeatureRow(
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
+                .size(40.dp)
                 .clip(CircleShape)
-                .background(iconTint.copy(alpha = 0.1f)),
+                .background(Marigold)
+                .border(BorderStroke(1.5.dp, ForestInk), CircleShape),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = iconTint,
+                tint = ForestInk,
                 modifier = Modifier.size(20.dp)
             )
         }
@@ -360,8 +373,8 @@ private fun IntroFeatureRow(
         Text(
             text = text,
             fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = CharcoalText
+            fontWeight = FontWeight.Bold,
+            color = ForestInk
         )
     }
 }
@@ -385,13 +398,14 @@ private fun Screen2LanguageSelection(
         Text(
             text = "Select Language",
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = RailNavy
+            fontWeight = FontWeight.ExtraBold,
+            color = ForestInk
         )
         Text(
             text = "Choose your preferred language for RailSathi",
             fontSize = 14.sp,
-            color = CharcoalTextMuted,
+            fontWeight = FontWeight.Medium,
+            color = ForestInk.copy(alpha = 0.75f),
             modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
         )
 
@@ -401,25 +415,23 @@ private fun Screen2LanguageSelection(
         ) {
             IndianLanguage.values().forEach { lang ->
                 val isChosen = lang == selected
-                Card(
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(1440.dp))
+                        .background(if (isChosen) Marigold else Parchment)
+                        .border(
+                            width = if (isChosen) 2.dp else 1.dp,
+                            color = ForestInk,
+                            shape = RoundedCornerShape(1440.dp)
+                        )
                         .clickable { onSelect(lang) }
                         .testTag("lang_option_${lang.name.lowercase()}"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (isChosen) RailNavy.copy(alpha = 0.08f) else WarmSurface
-                    ),
-                    border = BorderStroke(
-                        width = if (isChosen) 2.dp else 1.dp,
-                        color = if (isChosen) RailNavy else WarmBorder
-                    )
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 18.dp, vertical = 16.dp),
+                            .padding(horizontal = 20.dp, vertical = 14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -427,28 +439,29 @@ private fun Screen2LanguageSelection(
                             Text(
                                 text = lang.englishName,
                                 fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isChosen) RailNavy else CharcoalText
+                                fontWeight = FontWeight.ExtraBold,
+                                color = ForestInk
                             )
                             Text(
                                 text = lang.nativeName,
-                                fontSize = 14.sp,
-                                color = if (isChosen) RailNavy.copy(alpha = 0.8f) else CharcoalTextMuted
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isChosen) ForestInk else CharcoalTextMuted
                             )
                         }
 
                         if (isChosen) {
                             Box(
                                 modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(RailNavy),
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(ForestInk),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Selected",
-                                    tint = Color.White,
+                                    tint = SunlitCream,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
@@ -489,22 +502,23 @@ private fun Screen3AuthAndRole(
         Text(
             text = "Welcome to RailSathi",
             fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = RailNavy
+            fontWeight = FontWeight.ExtraBold,
+            color = ForestInk
         )
         Text(
             text = "Select your role and sign in to get started",
             fontSize = 14.sp,
-            color = CharcoalTextMuted,
+            fontWeight = FontWeight.Medium,
+            color = ForestInk.copy(alpha = 0.75f),
             modifier = Modifier.padding(top = 4.dp, bottom = 20.dp)
         )
 
         // Role Selection Header
         Text(
             text = "Select Role",
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
-            color = CharcoalText,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = ForestInk,
             modifier = Modifier.padding(bottom = 10.dp)
         )
 
@@ -540,12 +554,12 @@ private fun Screen3AuthAndRole(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Authentication Block
-        Card(
+        // Authentication Block: Sunlit Stamped Card with Forest Ink shadow
+        SunlitStampedCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = WarmSurface),
-            border = BorderStroke(1.dp, WarmBorder)
+            containerColor = Parchment,
+            borderColor = ForestInk,
+            shadowOffset = 6.dp
         ) {
             Column(
                 modifier = Modifier
@@ -555,14 +569,15 @@ private fun Screen3AuthAndRole(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 Text(
-                    text = "Sign in to securely link your profile & sync your suburban train preferences",
+                    text = "Sign in to securely link your profile & sync your train preferences",
                     fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
                     color = CharcoalTextMuted,
                     textAlign = TextAlign.Center
                 )
 
-                // Google Sign In Primary Button
-                Button(
+                // Google Sign In Primary Pill Button
+                ForestPillButton(
                     onClick = {
                         isSigningInState = true
                         authErrorMessage = null
@@ -587,32 +602,20 @@ private fun Screen3AuthAndRole(
                             }
                         }
                     },
+                    text = if (isSigningInState) "Connecting to Google..." else "Sign in with Google",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp)
                         .testTag("onboarding_google_signin_button"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
                     enabled = !isSigningInState
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        Text(
-                            text = if (isSigningInState) "Connecting to Google..." else "Sign in with Google",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
+                )
 
                 if (authErrorMessage != null) {
                     Text(
                         text = authErrorMessage ?: "",
                         fontSize = 12.sp,
-                        color = TerracottaAmber,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFB91C1C),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(horizontal = 4.dp)
                     )
@@ -624,15 +627,15 @@ private fun Screen3AuthAndRole(
                         .padding(vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    HorizontalDivider(modifier = Modifier.weight(1f), color = WarmBorder)
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = ForestInk.copy(alpha = 0.2f))
                     Text(
                         text = " OR ENTER DETAILS ",
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = CharcoalTextMuted,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = ForestInk,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
-                    HorizontalDivider(modifier = Modifier.weight(1f), color = WarmBorder)
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = ForestInk.copy(alpha = 0.2f))
                 }
 
                 // Custom Name Input
@@ -643,15 +646,15 @@ private fun Screen3AuthAndRole(
                     placeholder = { Text(if (selectedRole == UserRole.VENDOR) "e.g. Ramesh Kumar" else "e.g. Amit Sen") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(1440.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CharcoalText,
-                        unfocusedTextColor = CharcoalText,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        cursorColor = RailNavy,
-                        focusedBorderColor = RailNavy,
-                        unfocusedBorderColor = WarmBorder
+                        focusedTextColor = ForestInk,
+                        unfocusedTextColor = ForestInk,
+                        focusedContainerColor = SunlitCream,
+                        unfocusedContainerColor = SunlitCream,
+                        cursorColor = ForestInk,
+                        focusedBorderColor = ForestInk,
+                        unfocusedBorderColor = ForestInk.copy(alpha = 0.5f)
                     )
                 )
 
@@ -663,62 +666,46 @@ private fun Screen3AuthAndRole(
                     placeholder = { Text("e.g. yourname@gmail.com") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(1440.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = CharcoalText,
-                        unfocusedTextColor = CharcoalText,
-                        focusedContainerColor = Color.White,
-                        unfocusedContainerColor = Color.White,
-                        cursorColor = RailNavy,
-                        focusedBorderColor = RailNavy,
-                        unfocusedBorderColor = WarmBorder
+                        focusedTextColor = ForestInk,
+                        unfocusedTextColor = ForestInk,
+                        focusedContainerColor = SunlitCream,
+                        unfocusedContainerColor = SunlitCream,
+                        cursorColor = ForestInk,
+                        focusedBorderColor = ForestInk,
+                        unfocusedBorderColor = ForestInk.copy(alpha = 0.5f)
                     )
                 )
 
                 // Sign In with details button
                 if (customNameInput.isNotBlank() || customEmailInput.isNotBlank()) {
-                    Button(
+                    MarigoldPillButton(
                         onClick = {
                             val cleanName = customNameInput.trim().ifBlank { if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter" }
                             val cleanEmail = customEmailInput.trim().ifBlank { null }
                             val genId = "usr_${System.currentTimeMillis()}"
                             onGoogleSignIn(cleanEmail, cleanName, "token_direct", genId, null)
                         },
+                        text = "Continue with My Details",
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = TerracottaAmber)
-                    ) {
-                        Text(
-                            text = "Continue with My Details",
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = 14.sp
-                        )
-                    }
+                            .height(50.dp)
+                    )
                 }
 
                 // Quick Guest Commuter option
-                OutlinedButton(
+                OutlinedPillButton(
                     onClick = {
                         val defaultTitle = if (selectedRole == UserRole.VENDOR) "Station Vendor" else "Daily Commuter"
                         onGoogleSignIn(null, defaultTitle, null, null, null)
                     },
+                    text = "Continue as Guest",
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
-                        .testTag("onboarding_guest_button"),
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, WarmBorder)
-                ) {
-                    Text(
-                        text = "Continue as Guest",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = CharcoalText
-                    )
-                }
+                        .testTag("onboarding_guest_button")
+                )
             }
         }
     }
@@ -733,36 +720,35 @@ private fun RoleCard(
     modifier: Modifier = Modifier,
     onSelect: () -> Unit
 ) {
-    Card(
+    Box(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .clickable { onSelect() },
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) RailNavy.copy(alpha = 0.08f) else WarmSurface
-        ),
-        border = BorderStroke(
-            width = if (isSelected) 2.dp else 1.dp,
-            color = if (isSelected) RailNavy else WarmBorder
-        )
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (isSelected) Marigold else Parchment)
+            .border(
+                width = if (isSelected) 2.dp else 1.dp,
+                color = ForestInk,
+                shape = RoundedCornerShape(20.dp)
+            )
+            .clickable { onSelect() }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(36.dp)
+                    .size(38.dp)
                     .clip(CircleShape)
-                    .background(if (isSelected) RailNavy else CharcoalTextMuted.copy(alpha = 0.15f)),
+                    .background(if (isSelected) ForestInk else SageWash)
+                    .border(BorderStroke(1.dp, ForestInk), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = if (isSelected) Color.White else CharcoalText,
+                    tint = if (isSelected) SunlitCream else ForestInk,
                     modifier = Modifier.size(20.dp)
                 )
             }
@@ -770,13 +756,14 @@ private fun RoleCard(
             Text(
                 text = title,
                 fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isSelected) RailNavy else CharcoalText
+                fontWeight = FontWeight.ExtraBold,
+                color = ForestInk
             )
 
             Text(
                 text = description,
                 fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
                 color = CharcoalTextMuted,
                 lineHeight = 16.sp
             )

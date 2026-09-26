@@ -25,6 +25,7 @@ import com.example.data.model.FoodItem
 import com.example.data.model.IndianLanguage
 import com.example.data.model.JourneySession
 import com.example.data.model.JourneyStatus
+import com.example.data.model.OrderStatus
 import com.example.data.model.RailwayStation
 import com.example.data.model.RegularCommuteSchedule
 import com.example.data.model.TrainCandidate
@@ -59,7 +60,7 @@ enum class AppNavTab {
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     private val db = AppDatabase.getDatabase(application)
-    val railwayDataProvider: RailwayDataProvider = HybridRailwayDataProvider()
+    val railwayDataProvider: RailwayDataProvider = HybridRailwayDataProvider(db)
     val repository = RailSathiRepository(db, railwayDataProvider, application)
     private val prefs = AppPreferences(application)
     val locationTracker = TrainLocationTracker(application)
@@ -70,6 +71,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         locationTracker = locationTracker,
         scope = viewModelScope
     )
+
+    private val _allApiStations = MutableStateFlow<List<RailwayStation>>(emptyList())
+    val allApiStations: StateFlow<List<RailwayStation>> = _allApiStations.asStateFlow()
+
+    private val _selectedStation = MutableStateFlow<RailwayStation?>(null)
+    val selectedStation: StateFlow<RailwayStation?> = _selectedStation.asStateFlow()
 
     val currentLanguage: StateFlow<IndianLanguage> = prefs.languageFlow
     val isSeniorMode: StateFlow<Boolean> = prefs.seniorModeFlow
@@ -192,6 +199,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var lastRequestTimestamp: Long = 0L
 
     init {
+        // Synchronize verified role with repository for backend authorization
+        repository.setVerifiedRole(_currentRole.value)
+
+        // Load stations directory from API and initialize default suburban board if needed
+        viewModelScope.launch {
+            try {
+                val stations = railwayDataProvider.getAllStations()
+                _allApiStations.value = stations
+                if (nearbyStation.value == null && stations.isNotEmpty()) {
+                    val defaultStation = stations.find { it.code.equals("SDAH", ignoreCase = true) } ?: stations.first()
+                    _selectedStation.value = defaultStation
+                    trainContextEngine.loadStationBoard(defaultStation)
+                }
+            } catch (_: Exception) {}
+        }
+
         viewModelScope.launch {
             activeJourneySession.collect { session ->
                 if (session != null && session.status == JourneyStatus.ACTIVE) {
@@ -255,6 +278,22 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         locationTracker.setManualSimulationLocation(stationCode)
     }
 
+    fun selectStationForLiveBoard(station: RailwayStation) {
+        _selectedStation.value = station
+        trainContextEngine.loadStationBoard(station)
+    }
+
+    fun selectStationByCode(code: String) {
+        viewModelScope.launch {
+            val st = _allApiStations.value.find { it.code.equals(code, ignoreCase = true) }
+                ?: railwayDataProvider.getAllStations().find { it.code.equals(code, ignoreCase = true) }
+            if (st != null) {
+                _selectedStation.value = st
+                trainContextEngine.loadStationBoard(st)
+            }
+        }
+    }
+
     fun setLanguage(lang: IndianLanguage) {
         prefs.saveLanguage(lang)
     }
@@ -292,10 +331,42 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun switchRole(role: UserRole) {
+        val inProgress = activeRequests.value.any { req ->
+            val status = try {
+                OrderStatus.valueOf(req.status)
+            } catch (_: Exception) {
+                OrderStatus.REQUESTED
+            }
+            !com.example.data.engine.OrderStateMachine.isTerminal(status)
+        }
+        if (inProgress) {
+            _alertBanner.value = "Cannot switch role while you have an active order in progress. Please complete or cancel the order first."
+            viewModelScope.launch {
+                delay(3500)
+                _alertBanner.value = null
+            }
+            return
+        }
+
         _currentRole.value = role
         prefs.saveRole(role)
+        repository.setVerifiedRole(role)
         if (role == UserRole.VENDOR) {
             _selectedCoach.value = "VND-1"
+        }
+    }
+
+    fun toggleVendorAvailability(isOnline: Boolean) {
+        viewModelScope.launch {
+            val vendorId = selectedVendorId.value
+            try {
+                repository.setVendorAvailability(vendorId, isOnline)
+                _alertBanner.value = if (isOnline) "Status: AVAILABLE for new orders." else "Status: NOT AVAILABLE. Existing accepted orders remain active."
+            } catch (e: Exception) {
+                _alertBanner.value = e.message ?: "Could not update availability"
+            }
+            delay(3000)
+            _alertBanner.value = null
         }
     }
 
@@ -463,6 +534,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             prefs.saveRole(savedRole)
             prefs.setOnboardingCompleted(true)
             _currentRole.value = savedRole
+            repository.setVerifiedRole(savedRole)
 
             val existingUser = repository.getActiveUser()
             if (existingUser == null) {
@@ -519,6 +591,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             prefs.saveLanguage(language)
             prefs.setOnboardingCompleted(true)
             _currentRole.value = role
+            repository.setVerifiedRole(role)
 
             val effectiveName = googleName?.ifBlank { null } ?: if (role == UserRole.VENDOR) "Station Vendor" else "Daily Commuter"
             val effectivePhone = "9876543210"
@@ -581,6 +654,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _searchedTrains.value = emptyList()
             _currentRole.value = UserRole.GUEST
             _activeNavTab.value = AppNavTab.HOME
+            repository.setVerifiedRole(UserRole.TRAVELER)
 
             // 6. Clear Preferences (this updates onboardingCompletedFlow to false)
             prefs.clearAll()
@@ -691,6 +765,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             prefs.saveSeniorMode(seniorMode)
             prefs.setOnboardingCompleted(true)
             _currentRole.value = role
+            repository.setVerifiedRole(role)
 
             val user = UserEntity(
                 userId = "user_${System.currentTimeMillis()}",
@@ -719,12 +794,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val session = activeJourneySession.value
             val route = _activeRouteDetails.value
 
-            if (session == null || route == null) {
-                _alertBanner.value = "Please start a journey first to send signal to vendors onboard!"
-                delay(3000)
-                _alertBanner.value = null
-                return@launch
-            }
+            val effectiveTrainNumber = session?.trainNumber
+                ?: selectedCandidate.value?.trainNumber
+                ?: stationCandidates.value.firstOrNull()?.trainNumber
+                ?: "31821"
+            val effectiveTrainName = session?.trainName
+                ?: selectedCandidate.value?.trainName
+                ?: stationCandidates.value.firstOrNull()?.trainName
+                ?: "Sealdah - Ranaghat Local"
 
             val coach = _selectedCoach.value
             val userName = activeUser.value?.name ?: "Traveler"
@@ -732,8 +809,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
             val req = repository.createAndDispatchFoodRequest(
                 passengerName = userName,
-                trainNumber = route.trainNumber,
-                trainName = route.trainName,
+                trainNumber = effectiveTrainNumber,
+                trainName = effectiveTrainName,
                 coachNumber = coach,
                 seatDetail = seatNote,
                 foodItem = foodItem,

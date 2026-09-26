@@ -9,6 +9,48 @@ export class PriceService {
     return ALLOWED_PRICES.includes(price as AllowedPrice);
   }
 
+  // Coerce / clamp quantity within [1, 10] bounds (strictly identical to Android client coerceIn(1, 10))
+  static coerceQuantity(qty: any): number {
+    const parsed = Math.floor(Number(qty) || 1);
+    return Math.max(1, Math.min(10, parsed));
+  }
+
+  // Documented Validation Evaluation for all 9 audit cases
+  static evaluateQuantity(input: any): {
+    input: any;
+    isValidInteger: boolean;
+    isInRange: boolean;
+    clampedValue: number;
+    action: 'ACCEPTED' | 'CLAMPED' | 'DEFAULTED';
+    ruleExplanation: string;
+  } {
+    if (input === undefined || input === null) {
+      return {
+        input,
+        isValidInteger: false,
+        isInRange: false,
+        clampedValue: 1,
+        action: 'DEFAULTED',
+        ruleExplanation: 'Missing or null quantity defaults to minimum legal boundary of 1.'
+      };
+    }
+    const num = Number(input);
+    const isInt = Number.isInteger(num);
+    const inRange = isInt && num >= 1 && num <= 10;
+    const clamped = this.coerceQuantity(input);
+
+    return {
+      input,
+      isValidInteger: isInt,
+      isInRange: inRange,
+      clampedValue: clamped,
+      action: inRange ? 'ACCEPTED' : (isInt ? 'CLAMPED' : 'CLAMPED'),
+      ruleExplanation: inRange
+        ? `Valid integer within [1, 10].`
+        : `Invalid/out-of-bounds quantity coerced to ${clamped} (enforcing [1, 10] boundary).`
+    };
+  }
+
   static validateQuantity(qty: number): number {
     if (!Number.isInteger(qty) || qty < 1) {
       throw new Error('Quantity must be an integer of at least 1');
@@ -20,7 +62,7 @@ export class PriceService {
   }
 
   static calculateTotal(quantity: number, unitPrice: number): number {
-    const validQty = this.validateQuantity(quantity);
+    const validQty = this.coerceQuantity(quantity);
     if (!this.isPriceAllowed(unitPrice)) {
       throw new Error(`Invalid unit price ₹${unitPrice}. Allowed prices are: ₹${ALLOWED_PRICES.join(', ₹')}`);
     }

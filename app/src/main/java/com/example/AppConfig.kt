@@ -1,7 +1,7 @@
 package com.example
 
 /**
- * RailSaathi Central Application Configuration
+ * RailSathi Central Application Configuration
  *
  * Update [API_BASE_URL] with your deployed Vercel URL (e.g. https://YOUR-PROJECT.vercel.app).
  * For local Android Emulator development against a local server, use "http://10.0.2.2:3000".

@@ -82,7 +82,28 @@ import com.example.data.model.TrainCandidate
 import com.example.data.model.TrainContextState
 import com.example.data.repository.TrainRouteDetails
 import com.example.ui.components.ContextualHintCard
+import com.example.ui.components.SuburbanCommuterHeroSection
+import com.example.ui.components.SuburbanOfferingsGrid
+import com.example.ui.components.DoYouKnowCarousel
+import com.example.ui.components.UserGuidanceModal
+import com.example.ui.components.UserGuideAudience
+import com.example.ui.components.RailMadadDialog
+import com.example.ui.components.NotificationsDialog
 import com.example.ui.localization.LocalizationManager
+import com.example.ui.viewmodel.AppNavTab
+import com.example.ui.theme.BotanicalStarRating
+import com.example.ui.theme.ForestInk
+import com.example.ui.theme.ForestPillButton
+import com.example.ui.theme.Marigold
+import com.example.ui.theme.MarigoldPillButton
+import com.example.ui.theme.OutlinedPillButton
+import com.example.ui.theme.Parchment
+import com.example.ui.theme.SageWash
+import com.example.ui.theme.SunlitCardShape
+import com.example.ui.theme.SunlitCream
+import com.example.ui.theme.SunlitPillShape
+import com.example.ui.theme.SunlitStampedCard
+import com.example.ui.theme.VividFern
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.CharcoalText
 import com.example.ui.theme.CharcoalTextMuted
@@ -134,10 +155,19 @@ fun TravelerHomeScreen(
     userTravelStatus: com.example.data.location.UserTravelStatus = com.example.data.location.UserTravelStatus.STATIONARY,
     locationManagerState: com.example.data.location.LocationManagerState = com.example.data.location.LocationManagerState(),
     onToggleActiveTravel: () -> Unit = {},
-    availableCoaches: List<String> = emptyList()
+    availableCoaches: List<String> = emptyList(),
+    userName: String = "Kailash Kumar",
+    allStations: List<RailwayStation> = emptyList(),
+    onSelectStationCode: (String) -> Unit = {},
+    onNavigateToTab: (AppNavTab) -> Unit = {}
 ) {
     var seatLocationText by remember { mutableStateOf("") }
     var selectedFilter by remember { mutableStateOf("All") }
+
+    var showGuidanceModal by remember { mutableStateOf(false) }
+    var guidanceInitialAudience by remember { mutableStateOf(UserGuideAudience.PUBLIC_COMMUTER) }
+    var showRailMadadModal by remember { mutableStateOf(false) }
+    var showNotificationsModal by remember { mutableStateOf(false) }
 
     val coachOptions = if (availableCoaches.isNotEmpty()) {
         availableCoaches
@@ -175,6 +205,73 @@ fun TravelerHomeScreen(
             }
 
             // =========================================================================
+            // GREETING & QUICK ACCESS (MATCHING REFERENCE UI)
+            // =========================================================================
+            item {
+                Column(modifier = Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp)) {
+                    Text(
+                        text = "Hi, $userName!",
+                        fontSize = if (isSeniorMode) 24.sp else 21.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = ForestInk
+                    )
+                    Text(
+                        text = "Where are you heading today?",
+                        fontSize = if (isSeniorMode) 14.sp else 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = CharcoalTextMuted
+                    )
+                }
+            }
+
+            // Suburban Commuter Quick Actions: Signal Chai, Live EMU Board, Coach Crowding Radar
+            item {
+                SuburbanCommuterHeroSection(
+                    isSeniorMode = isSeniorMode,
+                    onSignalChai = {
+                        val chai = RegionalSnacksCatalog.items.find { it.id == "chai_1" } ?: RegionalSnacksCatalog.items.first()
+                        onSendHungerSignal(chai, seatLocationText)
+                    },
+                    onLiveTimetable = {
+                        if (stationCandidates.isNotEmpty()) {
+                            onSelectCandidate(stationCandidates.first())
+                        }
+                    },
+                    onCoachRadar = { onNavigateToTab(AppNavTab.COACH_RADAR) }
+                )
+            }
+
+            // Suburban Travel Utilities (Real functionality: Timetable, Radar, Chai, Budget, Rail Madad, Guide)
+            item {
+                SuburbanOfferingsGrid(
+                    isSeniorMode = isSeniorMode,
+                    onLiveTimetable = {
+                        if (stationCandidates.isNotEmpty() && selectedCandidate == null) {
+                            onSelectCandidate(stationCandidates.first())
+                        }
+                    },
+                    onCoachPosition = { onNavigateToTab(AppNavTab.COACH_RADAR) },
+                    onTrackTrain = {
+                        if (stationCandidates.isNotEmpty() && selectedCandidate == null) {
+                            onSelectCandidate(stationCandidates.first())
+                        }
+                    },
+                    onOrderFood = { selectedFilter = "All" },
+                    onDailyBudget = { onNavigateToTab(AppNavTab.BUDGET_LEDGER) },
+                    onRailMadad = { showRailMadadModal = true },
+                    onUserGuidance = {
+                        guidanceInitialAudience = UserGuideAudience.PUBLIC_COMMUTER
+                        showGuidanceModal = true
+                    }
+                )
+            }
+
+            // Do You Know? Carousel
+            item {
+                DoYouKnowCarousel(isSeniorMode = isSeniorMode)
+            }
+
+            // =========================================================================
             // CASE 1: USER IS NOT IN AN ACTIVE JOURNEY (STANDBY / OFF-TRACK / NEAR STN)
             // =========================================================================
             if (journeySession == null) {
@@ -192,13 +289,13 @@ fun TravelerHomeScreen(
 
                 // Greeting & Location Awareness Card
                 item {
-                    Card(
+                    SunlitStampedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                        border = BorderStroke(1.dp, WarmBorder)
+                        containerColor = Parchment,
+                        borderColor = ForestInk,
+                        shadowOffset = 6.dp
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(18.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -209,7 +306,7 @@ fun TravelerHomeScreen(
                                         modifier = Modifier
                                             .size(10.dp)
                                             .clip(CircleShape)
-                                            .background(if (locationInfo.isNearStation) NatureGreen else Color(0xFF94A3B8))
+                                            .background(if (locationInfo.isNearStation) VividFern else CharcoalTextMuted)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
@@ -219,22 +316,23 @@ fun TravelerHomeScreen(
                                             "🏠 No Active Journey"
                                         },
                                         fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = CharcoalText
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ForestInk
                                     )
                                 }
 
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFFF1F5F9))
+                                        .clip(RoundedCornerShape(1440.dp))
+                                        .background(SageWash)
+                                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
+                                ) {
                                     Text(
                                         text = "Standby Radar",
                                         fontSize = 11.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = CharcoalTextMuted
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForestInk
                                     )
                                 }
                             }
@@ -248,22 +346,23 @@ fun TravelerHomeScreen(
                                     "Start a journey to track your train and signal snacks to vendors onboard."
                                 },
                                 fontSize = if (isSeniorMode) 14.sp else 12.sp,
+                                fontWeight = FontWeight.Medium,
                                 color = CharcoalTextMuted
                             )
 
                             Spacer(modifier = Modifier.height(10.dp))
 
                             // Battery-saving GPS policy status & trigger toggle
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (locationManagerState.isTrackingGps) Color(0xFFF0FDF4) else Color(0xFFF8FAFC),
-                                border = BorderStroke(1.dp, if (locationManagerState.isTrackingGps) Color(0xFFBBF7D0) else Color(0xFFE2E8F0)),
-                                modifier = Modifier.fillMaxWidth()
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(1440.dp))
+                                    .background(SunlitCream)
+                                    .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                                    modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
@@ -275,9 +374,9 @@ fun TravelerHomeScreen(
                                                     .clip(CircleShape)
                                                     .background(
                                                         when (locationManagerState.serviceState) {
-                                                            com.example.data.location.LocationServiceState.ACTIVE -> NatureGreen
-                                                            com.example.data.location.LocationServiceState.PAUSED_BACKGROUND -> Color(0xFFF59E0B)
-                                                            else -> Color(0xFF94A3B8)
+                                                            com.example.data.location.LocationServiceState.ACTIVE -> VividFern
+                                                            com.example.data.location.LocationServiceState.PAUSED_BACKGROUND -> Marigold
+                                                            else -> CharcoalTextMuted
                                                         }
                                                     )
                                             )
@@ -290,7 +389,7 @@ fun TravelerHomeScreen(
                                                 },
                                                 fontSize = 12.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = CharcoalText
+                                                color = ForestInk
                                             )
                                         }
                                         Text(
@@ -309,8 +408,8 @@ fun TravelerHomeScreen(
                                         Text(
                                             text = if (userTravelStatus == com.example.data.location.UserTravelStatus.ACTIVE_TRAVEL) "Pause GPS" else "Start Travel",
                                             fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (userTravelStatus == com.example.data.location.UserTravelStatus.ACTIVE_TRAVEL) AlertRed else RailNavy
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = if (userTravelStatus == com.example.data.location.UserTravelStatus.ACTIVE_TRAVEL) AlertRed else ForestInk
                                         )
                                     }
                                 }
@@ -321,11 +420,11 @@ fun TravelerHomeScreen(
 
                 // Regular Commute Suggestion Card
                 item {
-                    Card(
+                    SunlitStampedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
-                        border = BorderStroke(1.dp, Color(0xFFBFDBFE))
+                        containerColor = Parchment,
+                        borderColor = ForestInk,
+                        shadowOffset = 5.dp
                     ) {
                         Row(
                             modifier = Modifier
@@ -338,30 +437,28 @@ fun TravelerHomeScreen(
                                 Text(
                                     text = "Daily Commute",
                                     fontSize = 12.sp,
-                                    color = RailNavy,
-                                    fontWeight = FontWeight.Bold
+                                    color = ForestInk,
+                                    fontWeight = FontWeight.ExtraBold
                                 )
                                 Text(
                                     text = "${regularCommute.usualTrainName} (${regularCommute.usualTrainNumber})",
                                     fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalText
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                                 Text(
                                     text = "${regularCommute.originStationName} ➔ ${regularCommute.destStationName} • ${regularCommute.usualDepartureTime} • Coach ${regularCommute.usualCoach}",
                                     fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
                                     color = CharcoalTextMuted
                                 )
                             }
 
-                            Button(
+                            MarigoldPillButton(
                                 onClick = onStartRegularCommute,
-                                colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
-                                shape = RoundedCornerShape(8.dp),
+                                text = "Start",
                                 modifier = Modifier.testTag("start_daily_commute_btn")
-                            ) {
-                                Text("Start", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
+                            )
                         }
                     }
                 }
@@ -369,13 +466,13 @@ fun TravelerHomeScreen(
                 // Candidate Train Preview (if user tapped a candidate or searched)
                 if (selectedCandidate != null) {
                     item {
-                        Card(
+                        SunlitStampedCard(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                            border = BorderStroke(2.dp, RailNavy)
+                            containerColor = SunlitCream,
+                            borderColor = ForestInk,
+                            shadowOffset = 6.dp
                         ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
+                            Column(modifier = Modifier.padding(18.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -384,52 +481,46 @@ fun TravelerHomeScreen(
                                     Text(
                                         text = "Selected Candidate Train",
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = RailNavy
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ForestInk
                                     )
                                     IconButton(onClick = onClearCandidate) {
-                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = CharcoalTextMuted)
+                                        Icon(Icons.Default.Close, contentDescription = "Clear", tint = ForestInk)
                                     }
                                 }
 
                                 Text(
                                     text = "${selectedCandidate.trainName} (${selectedCandidate.trainNumber})",
-                                    fontSize = if (isSeniorMode) 18.sp else 16.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalText
+                                    fontSize = if (isSeniorMode) 19.sp else 17.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                                 Text(
                                     text = "Dep: ${selectedCandidate.departureTime} • ${selectedCandidate.platform} • ${selectedCandidate.originStationName} ➔ ${selectedCandidate.destStationName}",
                                     fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
                                     color = CharcoalTextMuted
                                 )
 
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(14.dp))
 
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
-                                    OutlinedButton(
+                                    OutlinedPillButton(
                                         onClick = onClearCandidate,
-                                        modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp)
-                                    ) {
-                                        Text("Cancel")
-                                    }
+                                        text = "Cancel",
+                                        modifier = Modifier.weight(1f)
+                                    )
 
-                                    Button(
+                                    ForestPillButton(
                                         onClick = { onStartJourney(selectedCandidate, selectedCoach) },
+                                        text = "Board Train",
                                         modifier = Modifier
                                             .weight(1f)
-                                            .testTag("confirm_board_train_btn"),
-                                        shape = RoundedCornerShape(8.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = RailNavy)
-                                    ) {
-                                        Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
-                                        Spacer(modifier = Modifier.width(4.dp))
-                                        Text("Board Train", fontWeight = FontWeight.Bold)
-                                    }
+                                            .testTag("confirm_board_train_btn")
+                                    )
                                 }
                             }
                         }
@@ -439,25 +530,70 @@ fun TravelerHomeScreen(
                 // Station Departures / Radar List
                 item {
                     Column {
-                        Text(
-                            text = if (nearbyStation != null) "Departures from ${nearbyStation.nameEn}" else "Nearby Departure Radar",
-                            fontSize = if (isSeniorMode) 18.sp else 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (nearbyStation != null) "Departures from ${nearbyStation.nameEn} (${nearbyStation.code})" else "Live Suburban Departures",
+                                fontSize = if (isSeniorMode) 18.sp else 16.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = ForestInk
+                            )
+                            Text(
+                                text = "Real API Timetable",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = VividFern
+                            )
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
 
+                        // Real API Station Switcher Chips
+                        if (allStations.isNotEmpty()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                allStations.forEach { st ->
+                                    val isSelected = (nearbyStation?.code.equals(st.code, ignoreCase = true))
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(1440.dp))
+                                            .background(if (isSelected) ForestInk else SunlitCream)
+                                            .border(BorderStroke(1.2.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                            .clickable {
+                                                onSelectStationCode(st.code)
+                                                onSimulateStation(st.code)
+                                            }
+                                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    ) {
+                                        Text(
+                                            text = "${st.code} • ${st.nameEn}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isSelected) Color.White else ForestInk
+                                        )
+                                    }
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+
                         if (stationCandidates.isEmpty()) {
-                            Card(
+                            SunlitStampedCard(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                                border = BorderStroke(1.dp, WarmBorder)
+                                containerColor = Parchment,
+                                borderColor = ForestInk,
+                                shadowOffset = 4.dp
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
-                                    Text("No immediate departures detected at current position.", fontSize = 13.sp, color = CharcoalTextMuted)
+                                    Text("No immediate departures detected at current station.", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = ForestInk)
                                     Spacer(modifier = Modifier.height(6.dp))
-                                    Text("Use Search or click a simulation station above to test.", fontSize = 12.sp, color = RailNavy)
+                                    Text("Tap any station chip above or search to view suburban trains.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = CharcoalTextMuted)
                                 }
                             }
                         }
@@ -482,8 +618,8 @@ fun TravelerHomeScreen(
                         Text(
                             text = "Search All Suburban Locals",
                             fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ForestInk
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -501,7 +637,7 @@ fun TravelerHomeScreen(
                                 Icon(
                                     imageVector = Icons.Default.Search,
                                     contentDescription = "Search",
-                                    tint = RailNavy
+                                    tint = ForestInk
                                 )
                             },
                             trailingIcon = {
@@ -510,7 +646,7 @@ fun TravelerHomeScreen(
                                         Icon(
                                             imageVector = Icons.Default.Close,
                                             contentDescription = "Clear search",
-                                            tint = CharcoalTextMuted
+                                            tint = ForestInk
                                         )
                                     }
                                 }
@@ -524,15 +660,15 @@ fun TravelerHomeScreen(
                                 }
                             ),
                             singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(1440.dp),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedTextColor = CharcoalText,
-                                unfocusedTextColor = CharcoalText,
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
-                                cursorColor = RailNavy,
-                                focusedBorderColor = RailNavy,
-                                unfocusedBorderColor = WarmBorder
+                                focusedTextColor = ForestInk,
+                                unfocusedTextColor = ForestInk,
+                                focusedContainerColor = SunlitCream,
+                                unfocusedContainerColor = SunlitCream,
+                                cursorColor = ForestInk,
+                                focusedBorderColor = ForestInk,
+                                unfocusedBorderColor = ForestInk.copy(alpha = 0.5f)
                             ),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -550,26 +686,26 @@ fun TravelerHomeScreen(
                                     Text(
                                         text = "Search Results (${searchedTrains.size} trains)",
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = RailNavy
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ForestInk
                                     )
                                     TextButton(onClick = { onSearchQueryChange("") }) {
-                                        Text("Clear", fontSize = 12.sp, color = CharcoalTextMuted)
+                                        Text("Clear", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = ForestInk)
                                     }
                                 }
                             } else {
-                                Card(
+                                SunlitStampedCard(
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                                    border = BorderStroke(1.dp, WarmBorder)
+                                    containerColor = Parchment,
+                                    borderColor = ForestInk,
+                                    shadowOffset = 4.dp
                                 ) {
                                     Column(modifier = Modifier.padding(14.dp)) {
                                         Text(
                                             text = "No trains found for \"$searchQuery\"",
                                             fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = CharcoalText
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = ForestInk
                                         )
                                         Spacer(modifier = Modifier.height(4.dp))
                                         Text(
@@ -599,13 +735,13 @@ fun TravelerHomeScreen(
 
                 // Live Journey Header Card
                 item {
-                    Card(
+                    SunlitStampedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = RailNavy),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                        containerColor = Parchment,
+                        borderColor = ForestInk,
+                        shadowOffset = 6.dp
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(18.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -616,27 +752,31 @@ fun TravelerHomeScreen(
                                         modifier = Modifier
                                             .size(10.dp)
                                             .clip(CircleShape)
-                                            .background(NatureGreen)
+                                            .background(VividFern)
                                     )
                                     Spacer(modifier = Modifier.width(8.dp))
                                     Text(
                                         text = "LIVE JOURNEY TRACKING",
-                                        color = Color.White,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
+                                        color = ForestInk,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.ExtraBold,
                                         letterSpacing = 1.sp
                                     )
                                 }
 
-                                Button(
-                                    onClick = onEndJourney,
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0x33FFFFFF)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    modifier = Modifier.height(32.dp)
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(1440.dp))
+                                        .background(Marigold)
+                                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                        .clickable { onEndJourney() }
+                                        .padding(horizontal = 10.dp, vertical = 5.dp)
                                 ) {
-                                    Icon(Icons.Default.Stop, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("End", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Stop, contentDescription = null, tint = ForestInk, modifier = Modifier.size(14.dp))
+                                        Spacer(modifier = Modifier.width(4.dp))
+                                        Text("End", color = ForestInk, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
 
@@ -644,15 +784,16 @@ fun TravelerHomeScreen(
 
                             Text(
                                 text = "${journeySession.trainName} (${journeySession.trainNumber})",
-                                color = Color.White,
-                                fontSize = if (isSeniorMode) 20.sp else 18.sp,
-                                fontWeight = FontWeight.Bold
+                                color = ForestInk,
+                                fontSize = if (isSeniorMode) 22.sp else 19.sp,
+                                fontWeight = FontWeight.ExtraBold
                             )
 
                             Text(
                                 text = "${journeySession.originStation} ➔ ${journeySession.destinationStation}",
-                                color = Color(0xFFCBD5E1),
-                                fontSize = 13.sp
+                                color = CharcoalTextMuted,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium
                             )
 
                             Spacer(modifier = Modifier.height(10.dp))
@@ -664,13 +805,14 @@ fun TravelerHomeScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0x33FFFFFF))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .clip(RoundedCornerShape(1440.dp))
+                                        .background(SageWash)
+                                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
                                     Text(
                                         text = "Coach: ${journeySession.currentCoach}",
-                                        color = Color.White,
+                                        color = ForestInk,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -678,8 +820,9 @@ fun TravelerHomeScreen(
 
                                 Text(
                                     text = "$confidenceScore% • $confidenceDescription",
-                                    color = Color(0xFF94A3B8),
+                                    color = CharcoalTextMuted,
                                     fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -705,8 +848,8 @@ fun TravelerHomeScreen(
                         Text(
                             text = "Your Orders & Price Offers",
                             fontSize = if (isSeniorMode) 18.sp else 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = RailNavy
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ForestInk
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                     }
@@ -724,13 +867,13 @@ fun TravelerHomeScreen(
 
                 // Coach Selection & Seat Description Card
                 item {
-                    Card(
+                    SunlitStampedCard(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                        border = BorderStroke(1.dp, WarmBorder)
+                        containerColor = Parchment,
+                        borderColor = ForestInk,
+                        shadowOffset = 6.dp
                     ) {
-                        Column(modifier = Modifier.padding(16.dp)) {
+                        Column(modifier = Modifier.padding(18.dp)) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -739,26 +882,27 @@ fun TravelerHomeScreen(
                                 Text(
                                     text = LocalizationManager.getString("select_coach", language),
                                     fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalText
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
 
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(Color(0xFFDBEAFE))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .clip(RoundedCornerShape(1440.dp))
+                                        .background(Marigold)
+                                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
                                 ) {
                                     Text(
                                         text = "Current: $selectedCoach",
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = RailNavy
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = ForestInk
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
                             Row(
                                 modifier = Modifier
@@ -770,30 +914,40 @@ fun TravelerHomeScreen(
                                     val isSelected = selectedCoach == coach
                                     Box(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) RailNavy else WarmSurface)
-                                            .border(1.dp, if (isSelected) RailNavy else WarmBorder, RoundedCornerShape(8.dp))
+                                            .clip(RoundedCornerShape(1440.dp))
+                                            .background(if (isSelected) ForestInk else SunlitCream)
+                                            .border(1.dp, ForestInk, RoundedCornerShape(1440.dp))
                                             .clickable { onCoachSelect(coach) }
                                             .padding(horizontal = 14.dp, vertical = 8.dp)
                                             .testTag("coach_chip_$coach")
                                     ) {
                                         Text(
                                             text = coach,
-                                            color = if (isSelected) Color.White else CharcoalText,
+                                            color = if (isSelected) SunlitCream else ForestInk,
                                             fontSize = if (isSeniorMode) 15.sp else 13.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                            fontWeight = FontWeight.ExtraBold
                                         )
                                     }
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(14.dp))
 
                             OutlinedTextField(
                                 value = seatLocationText,
                                 onValueChange = { seatLocationText = it },
                                 placeholder = { Text(LocalizationManager.getString("seat_desc", language)) },
                                 singleLine = true,
+                                shape = RoundedCornerShape(1440.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedTextColor = ForestInk,
+                                    unfocusedTextColor = ForestInk,
+                                    focusedContainerColor = SunlitCream,
+                                    unfocusedContainerColor = SunlitCream,
+                                    cursorColor = ForestInk,
+                                    focusedBorderColor = ForestInk,
+                                    unfocusedBorderColor = ForestInk.copy(alpha = 0.5f)
+                                ),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .testTag("seat_location_input")
@@ -844,20 +998,20 @@ fun TravelerHomeScreen(
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             RegionalSnacksCatalog.items.take(4).forEach { fav ->
-                                Card(
+                                SunlitStampedCard(
                                     modifier = Modifier
                                         .width(140.dp)
-                                        .clip(RoundedCornerShape(12.dp))
                                         .clickable { onSendHungerSignal(fav, seatLocationText) },
-                                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                                    border = BorderStroke(1.dp, WarmBorder)
+                                    containerColor = Parchment,
+                                    borderColor = ForestInk,
+                                    shadowOffset = 4.dp
                                 ) {
                                     Column {
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .height(80.dp)
-                                                .background(Color(0xFFFEF3C7))
+                                                .background(SunlitCream)
                                         ) {
                                             if (!fav.imageUrl.isNullOrEmpty()) {
                                                 AsyncImage(
@@ -871,7 +1025,8 @@ fun TravelerHomeScreen(
                                                         .align(Alignment.TopEnd)
                                                         .padding(4.dp)
                                                         .clip(CircleShape)
-                                                        .background(Color.White.copy(alpha = 0.92f))
+                                                        .background(Marigold)
+                                                        .border(BorderStroke(1.dp, ForestInk), CircleShape)
                                                         .padding(horizontal = 5.dp, vertical = 2.dp)
                                                 ) {
                                                     Text(text = fav.emoji, fontSize = 12.sp)
@@ -885,12 +1040,12 @@ fun TravelerHomeScreen(
                                             }
                                         }
 
-                                        Column(modifier = Modifier.padding(8.dp)) {
+                                        Column(modifier = Modifier.padding(10.dp)) {
                                             Text(
                                                 text = fav.nameEn,
                                                 fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = CharcoalText,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = ForestInk,
                                                 maxLines = 1,
                                                 overflow = TextOverflow.Ellipsis
                                             )
@@ -902,14 +1057,14 @@ fun TravelerHomeScreen(
                                                 Text(
                                                     text = "₹${fav.typicalPriceInr}",
                                                     fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = TerracottaAmber
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = ForestInk
                                                 )
                                                 Text(
                                                     text = "Signal ➔",
                                                     fontSize = 10.sp,
-                                                    color = RailNavy,
-                                                    fontWeight = FontWeight.Bold
+                                                    color = ForestInk,
+                                                    fontWeight = FontWeight.ExtraBold
                                                 )
                                             }
                                         }
@@ -926,8 +1081,8 @@ fun TravelerHomeScreen(
                         Text(
                             text = "Full Snack Menu",
                             fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ForestInk
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -944,22 +1099,22 @@ fun TravelerHomeScreen(
                                 "Senior" to LocalizationManager.getString("filter_senior_soft", language)
                             ).forEach { (key, label) ->
                                 val isSelected = selectedFilter == key
-                                FilterChip(
-                                    selected = isSelected,
-                                    onClick = { selectedFilter = key },
-                                    label = {
-                                        Text(
-                                            text = label,
-                                            fontSize = if (isSeniorMode) 14.sp else 12.sp,
-                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = RailNavy,
-                                        selectedLabelColor = Color.White
-                                    ),
-                                    modifier = Modifier.testTag("filter_$key")
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(1440.dp))
+                                        .background(if (isSelected) ForestInk else SunlitCream)
+                                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                        .clickable { selectedFilter = key }
+                                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                                        .testTag("filter_$key")
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = if (isSeniorMode) 14.sp else 12.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (isSelected) SunlitCream else ForestInk
+                                    )
+                                }
                             }
                         }
                     }
@@ -984,9 +1139,25 @@ fun TravelerHomeScreen(
             }
 
             item {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(96.dp))
             }
         }
+
+        UserGuidanceModal(
+            isOpen = showGuidanceModal,
+            onDismiss = { showGuidanceModal = false },
+            initialAudience = guidanceInitialAudience
+        )
+
+        RailMadadDialog(
+            isOpen = showRailMadadModal,
+            onDismiss = { showRailMadadModal = false }
+        )
+
+        NotificationsDialog(
+            isOpen = showNotificationsModal,
+            onDismiss = { showNotificationsModal = false }
+        )
     }
 }
 
@@ -996,14 +1167,14 @@ fun CandidateTrainCard(
     isSeniorMode: Boolean,
     onSelect: () -> Unit
 ) {
-    Card(
+    SunlitStampedCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onSelect() }
             .testTag("candidate_train_${candidate.trainNumber}"),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = WarmSurface),
-        border = BorderStroke(1.dp, WarmBorder)
+        containerColor = Parchment,
+        borderColor = ForestInk,
+        shadowOffset = 4.dp
     ) {
         Row(
             modifier = Modifier
@@ -1016,37 +1187,40 @@ fun CandidateTrainCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "${candidate.trainName} (${candidate.trainNumber})",
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                        color = CharcoalText
+                        color = ForestInk
                     )
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = "${candidate.originStationName} ➔ ${candidate.destStationName}",
                     fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
                     color = CharcoalTextMuted
                 )
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
                 Row(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFFE2E8F0))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .clip(RoundedCornerShape(1440.dp))
+                            .background(SunlitCream)
+                            .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Text(candidate.platform, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = RailNavy)
+                        Text(candidate.platform, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = ForestInk)
                     }
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFFDCFCE7))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .clip(RoundedCornerShape(1440.dp))
+                            .background(SageWash)
+                            .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Text("Upcoming", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NatureGreen)
+                        Text("Upcoming", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = ForestInk)
                     }
                 }
             }
@@ -1054,16 +1228,24 @@ fun CandidateTrainCard(
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = candidate.departureTime,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                    color = RailNavy
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = if (isSeniorMode) 18.sp else 16.sp,
+                    color = ForestInk
                 )
-                Text(
-                    text = "Tap to Board ➔",
-                    fontSize = 11.sp,
-                    color = TerracottaAmber,
-                    fontWeight = FontWeight.Bold
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(1440.dp))
+                        .background(Marigold)
+                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "Board ➔",
+                        fontSize = 11.sp,
+                        color = ForestInk,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
             }
         }
     }
@@ -1087,18 +1269,18 @@ fun SnackFoodItemCard(
         else -> item.nameEn
     }
 
-    Card(
+    SunlitStampedCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("snack_card_${item.id}"),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = WarmSurface),
-        border = BorderStroke(1.dp, WarmBorder)
+        containerColor = Parchment,
+        borderColor = ForestInk,
+        shadowOffset = 5.dp
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1107,9 +1289,10 @@ fun SnackFoodItemCard(
                 // Real Food Image with fallback emoji
                 Box(
                     modifier = Modifier
-                        .size(if (isSeniorMode) 64.dp else 56.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(Color(0xFFFEF3C7)),
+                        .size(if (isSeniorMode) 68.dp else 60.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(SunlitCream)
+                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     if (!item.imageUrl.isNullOrEmpty()) {
@@ -1122,8 +1305,9 @@ fun SnackFoodItemCard(
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .clip(RoundedCornerShape(topStart = 6.dp))
-                                .background(Color.White.copy(alpha = 0.92f))
+                                .clip(RoundedCornerShape(topStart = 8.dp))
+                                .background(Marigold)
+                                .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(topStart = 8.dp))
                                 .padding(horizontal = 4.dp, vertical = 1.dp)
                         ) {
                             Text(text = item.emoji, fontSize = 12.sp)
@@ -1131,7 +1315,7 @@ fun SnackFoodItemCard(
                     } else {
                         Text(
                             text = item.emoji,
-                            fontSize = if (isSeniorMode) 28.sp else 24.sp
+                            fontSize = if (isSeniorMode) 30.sp else 26.sp
                         )
                     }
                 }
@@ -1147,8 +1331,8 @@ fun SnackFoodItemCard(
                         Text(
                             text = localizedName,
                             fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ForestInk,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
@@ -1157,8 +1341,8 @@ fun SnackFoodItemCard(
                         Text(
                             text = "Typical ~₹${item.typicalPriceInr}",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TerracottaAmber
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ForestInk
                         )
                     }
 
@@ -1170,25 +1354,26 @@ fun SnackFoodItemCard(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     // Dietary Tags
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         item.dietaryTags.take(2).forEach { tag ->
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(Color(0xFFF1F5F9))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .clip(RoundedCornerShape(1440.dp))
+                                    .background(SageWash)
+                                    .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     text = tag,
                                     fontSize = 10.sp,
-                                    color = Color(0xFF475569),
-                                    fontWeight = FontWeight.Medium
+                                    color = ForestInk,
+                                    fontWeight = FontWeight.Bold
                                 )
                             }
                         }
@@ -1196,7 +1381,7 @@ fun SnackFoodItemCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             // Stepper and Action Row
             Row(
@@ -1204,26 +1389,27 @@ fun SnackFoodItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Quantity Stepper
+                // Quantity Stepper with Sunlit styling
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFF1F5F9))
+                        .clip(RoundedCornerShape(1440.dp))
+                        .background(SunlitCream)
+                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
                         .padding(horizontal = 4.dp, vertical = 2.dp)
                 ) {
                     IconButton(
                         onClick = onQuantityDecrement,
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = ForestInk, modifier = Modifier.size(16.dp))
                     }
 
                     Text(
                         text = "$quantity",
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         fontSize = 15.sp,
-                        color = CharcoalText,
+                        color = ForestInk,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
 
@@ -1231,24 +1417,17 @@ fun SnackFoodItemCard(
                         onClick = onQuantityIncrement,
                         modifier = Modifier.size(32.dp)
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Add, contentDescription = "Increase", tint = ForestInk, modifier = Modifier.size(16.dp))
                     }
                 }
 
-                Button(
+                ForestPillButton(
                     onClick = onOrder,
-                    colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
-                    shape = RoundedCornerShape(8.dp),
+                    text = "Signal in $selectedCoach",
                     modifier = Modifier
-                        .height(if (isSeniorMode) 44.dp else 38.dp)
+                        .height(if (isSeniorMode) 46.dp else 40.dp)
                         .testTag("signal_btn_${item.id}")
-                ) {
-                    Text(
-                        text = "Signal in $selectedCoach",
-                        fontSize = if (isSeniorMode) 14.sp else 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
+                )
             }
         }
     }
@@ -1264,23 +1443,18 @@ fun TravelerRequestItemCard(
 ) {
     val isPriceConfirmed = request.status == OrderStatus.PRICE_CONFIRMED.name
 
-    Card(
+    SunlitStampedCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("request_item_${request.id}"),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = when (request.status) {
-                OrderStatus.PRICE_CONFIRMED.name -> Color(0xFFEFF6FF)
-                OrderStatus.CUSTOMER_CONFIRMED.name -> Color(0xFFFEF3C7)
-                OrderStatus.COMPLETED.name -> NatureGreenLight
-                else -> Color(0xFFF8FAFC)
-            }
-        ),
-        border = BorderStroke(
-            if (isPriceConfirmed) 2.dp else 1.dp,
-            if (isPriceConfirmed) RailNavy else WarmBorder
-        )
+        containerColor = when (request.status) {
+            OrderStatus.PRICE_CONFIRMED.name -> SunlitCream
+            OrderStatus.CUSTOMER_CONFIRMED.name -> Marigold
+            OrderStatus.COMPLETED.name -> SageWash
+            else -> Parchment
+        },
+        borderColor = ForestInk,
+        shadowOffset = 4.dp
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -1297,29 +1471,29 @@ fun TravelerRequestItemCard(
                         },
                         contentDescription = "Status",
                         tint = when (request.status) {
-                            OrderStatus.COMPLETED.name -> NatureGreen
-                            OrderStatus.CUSTOMER_CONFIRMED.name -> TerracottaAmber
-                            else -> RailNavy
+                            OrderStatus.COMPLETED.name -> VividFern
+                            OrderStatus.CUSTOMER_CONFIRMED.name -> ForestInk
+                            else -> ForestInk
                         },
                         modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "${request.foodItemName} × ${request.quantity}",
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                        color = CharcoalText
+                        color = ForestInk
                     )
                 }
 
                 if (request.status != OrderStatus.COMPLETED.name && request.status != OrderStatus.CUSTOMER_CONFIRMED.name) {
                     IconButton(onClick = onCancel, modifier = Modifier.size(28.dp)) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Cancel", tint = AlertRed)
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Cancel", tint = ForestInk)
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // Price or Status Details
             if (isPriceConfirmed) {
@@ -1329,9 +1503,10 @@ fun TravelerRequestItemCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFDBEAFE))
-                        .padding(10.dp),
+                        .clip(RoundedCornerShape(1440.dp))
+                        .background(Parchment)
+                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -1339,27 +1514,22 @@ fun TravelerRequestItemCard(
                         Text(
                             text = "Vendor Offered: ₹$unitPrice / item",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = RailNavy
+                            fontWeight = FontWeight.Bold,
+                            color = ForestInk
                         )
                         Text(
                             text = "Total: ₹$totalPrice (${request.quantity} items)",
                             fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ForestInk
                         )
                     }
 
-                    Button(
+                    MarigoldPillButton(
                         onClick = onConfirmPrice,
-                        colors = ButtonDefaults.buttonColors(containerColor = NatureGreen),
-                        shape = RoundedCornerShape(8.dp),
+                        text = "Confirm",
                         modifier = Modifier.testTag("confirm_price_order_btn")
-                    ) {
-                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Confirm", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
+                    )
                 }
             } else {
                 Text(
@@ -1369,6 +1539,7 @@ fun TravelerRequestItemCard(
                         else -> "Broadcasting request to station & coach vendors..."
                     },
                     fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
                     color = CharcoalTextMuted
                 )
             }

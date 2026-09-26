@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -29,14 +30,18 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsTransit
 import androidx.compose.material.icons.filled.Elderly
 import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.NearMe
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.AccountCircle
 import androidx.compose.material.icons.outlined.AccountTree
 import androidx.compose.material.icons.outlined.Fastfood
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -62,6 +67,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -78,11 +85,17 @@ import com.example.ui.localization.LocalizationManager
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.CharcoalText
 import com.example.ui.theme.CharcoalTextMuted
+import com.example.ui.theme.ForestInk
 import com.example.ui.theme.GoldYellow
+import com.example.ui.theme.Marigold
 import com.example.ui.theme.NatureGreen
 import com.example.ui.theme.NatureGreenLight
+import com.example.ui.theme.Parchment
 import com.example.ui.theme.RailNavy
+import com.example.ui.theme.SageWash
+import com.example.ui.theme.SunlitCream
 import com.example.ui.theme.TerracottaAmber
+import com.example.ui.theme.VividFern
 import com.example.ui.theme.WarmSandBackground
 import com.example.ui.theme.WarmSurface
 import com.example.ui.viewmodel.AppNavTab
@@ -101,144 +114,163 @@ fun RailAppTopBar(
     onLanguageChange: (IndianLanguage) -> Unit,
     onToggleSeniorMode: (Boolean) -> Unit,
     onEndJourney: () -> Unit = {},
-    onSwitchRole: () -> Unit = {}
+    onSwitchRole: () -> Unit = {},
+    onOpenNotifications: () -> Unit = {},
+    onOpenHelp: () -> Unit = {}
 ) {
     var showLangMenu by remember { mutableStateOf(false) }
 
     Surface(
-        color = RailNavy,
-        shadowElevation = 4.dp,
-        modifier = Modifier.fillMaxWidth().statusBarsPadding()
+        color = SunlitCream,
+        shadowElevation = 0.dp,
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+            .border(BorderStroke(1.5.dp, ForestInk))
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f)
-                ) {
+                // Left: Language Switcher circular pill (A/अ)
+                Box {
                     Box(
                         modifier = Modifier
-                            .size(if (isSeniorMode) 44.dp else 38.dp)
                             .clip(CircleShape)
-                            .background(TerracottaAmber),
+                            .background(SageWash)
+                            .border(BorderStroke(1.2.dp, ForestInk), CircleShape)
+                            .clickable { showLangMenu = true }
+                            .padding(8.dp)
+                            .testTag("lang_select_btn"),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DirectionsTransit,
-                            contentDescription = "Train Icon",
-                            tint = Color.White,
-                            modifier = Modifier.size(if (isSeniorMode) 26.dp else 22.dp)
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "A/अ",
+                                color = ForestInk,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    Column {
-                        Text(
-                            text = LocalizationManager.getString("app_title", language),
-                            color = Color.White,
-                            fontSize = if (isSeniorMode) 22.sp else 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = when (role) {
-                                UserRole.VENDOR -> LocalizationManager.getString("role_vendor", language)
-                                UserRole.TRAVELER -> LocalizationManager.getString("role_passenger", language)
-                                UserRole.GUEST -> LocalizationManager.getString("role_guest", language)
-                            },
-                            color = Color(0xFFE2E8F0),
-                            fontSize = if (isSeniorMode) 13.sp else 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    DropdownMenu(
+                        expanded = showLangMenu,
+                        onDismissRequest = { showLangMenu = false }
+                    ) {
+                        IndianLanguage.values().forEach { lang ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = "${lang.nativeName} (${lang.englishName})",
+                                        fontWeight = if (lang == language) FontWeight.Bold else FontWeight.Normal
+                                    )
+                                },
+                                onClick = {
+                                    onLanguageChange(lang)
+                                    showLangMenu = false
+                                }
+                            )
+                        }
                     }
                 }
 
+                // Center: RailSathi Logo & Suburban Subtitle
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f).padding(horizontal = 6.dp)
+                ) {
+                    Text(
+                        text = LocalizationManager.getString("app_title", language),
+                        color = ForestInk,
+                        fontSize = if (isSeniorMode) 22.sp else 19.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Text(
+                        text = when (role) {
+                            UserRole.VENDOR -> LocalizationManager.getString("role_vendor", language)
+                            UserRole.TRAVELER -> LocalizationManager.getString("role_passenger", language)
+                            UserRole.GUEST -> LocalizationManager.getString("role_guest", language)
+                        },
+                        color = CharcoalTextMuted,
+                        fontSize = if (isSeniorMode) 12.sp else 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                // Right Actions: Senior Mode + Notifications Bell + Guide Help
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    // Senior mode pill
+                    // Senior mode toggle button
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(if (isSeniorMode) GoldYellow else Color(0x33FFFFFF))
+                            .clip(RoundedCornerShape(1440.dp))
+                            .background(if (isSeniorMode) Marigold else SageWash)
+                            .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
                             .clickable { onToggleSeniorMode(!isSeniorMode) }
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                            .padding(horizontal = 8.dp, vertical = 5.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.Elderly,
-                                contentDescription = "Senior Mode",
-                                tint = if (isSeniorMode) Color.Black else Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = if (isSeniorMode) "Senior ON" else "Senior",
-                                color = if (isSeniorMode) Color.Black else Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                        Text(
+                            text = if (isSeniorMode) "Sr. ON" else "Sr.",
+                            color = ForestInk,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
                     }
 
-                    // Language dropdown button with proper Translate icon
-                    Box {
+                    // Notification Bell with unread indicator
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(SageWash)
+                            .border(BorderStroke(1.2.dp, ForestInk), CircleShape)
+                            .clickable { onOpenNotifications() }
+                            .testTag("top_bell_btn"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = "Alerts",
+                            tint = ForestInk,
+                            modifier = Modifier.size(17.dp)
+                        )
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(Color(0x33FFFFFF))
-                                .clickable { showLangMenu = true }
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
-                                .testTag("lang_select_btn"),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Default.Translate,
-                                    contentDescription = "Select Language",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = language.nativeName.take(4),
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFD93025))
+                                .align(Alignment.TopEnd)
+                        )
+                    }
 
-                        DropdownMenu(
-                            expanded = showLangMenu,
-                            onDismissRequest = { showLangMenu = false }
-                        ) {
-                            IndianLanguage.values().forEach { lang ->
-                                DropdownMenuItem(
-                                    text = {
-                                        Text(
-                                            text = "${lang.nativeName} (${lang.englishName})",
-                                            fontWeight = if (lang == language) FontWeight.Bold else FontWeight.Normal
-                                        )
-                                    },
-                                    onClick = {
-                                        onLanguageChange(lang)
-                                        showLangMenu = false
-                                    }
-                                )
-                            }
-                        }
+                    // User Handbook / Guide button
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(Marigold)
+                            .border(BorderStroke(1.2.dp, ForestInk), CircleShape)
+                            .clickable { onOpenHelp() }
+                            .testTag("top_help_btn"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.HelpOutline,
+                            contentDescription = "Guide",
+                            tint = ForestInk,
+                            modifier = Modifier.size(17.dp)
+                        )
                     }
                 }
             }
@@ -253,9 +285,10 @@ fun RailAppTopBar(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0x2BFFFFFF))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                        .clip(RoundedCornerShape(1440.dp))
+                        .background(Parchment)
+                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -267,14 +300,14 @@ fun RailAppTopBar(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(NatureGreen)
+                                .background(VividFern)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = "${journeySession.trainName} • $currentStation",
-                            color = Color.White,
+                            color = ForestInk,
                             fontSize = if (isSeniorMode) 13.sp else 12.sp,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -286,15 +319,16 @@ fun RailAppTopBar(
                     ) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(TerracottaAmber)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .clip(RoundedCornerShape(1440.dp))
+                                .background(Marigold)
+                                .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp)
                         ) {
                             Text(
                                 text = "Next: $nextStation (${etaSeconds}s)",
-                                color = Color.White,
+                                color = ForestInk,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }
@@ -304,9 +338,10 @@ fun RailAppTopBar(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0x1AFFFFFF))
-                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                        .clip(RoundedCornerShape(1440.dp))
+                        .background(SageWash)
+                        .border(BorderStroke(1.dp, ForestInk), RoundedCornerShape(1440.dp))
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -317,7 +352,7 @@ fun RailAppTopBar(
                         Icon(
                             imageVector = Icons.Default.NearMe,
                             contentDescription = "Location Status",
-                            tint = Color(0xFF94A3B8),
+                            tint = ForestInk,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(modifier = Modifier.width(6.dp))
@@ -327,9 +362,9 @@ fun RailAppTopBar(
                             } else {
                                 "🏠 Off-track / Standby • No active train"
                             },
-                            color = Color(0xFFCBD5E1),
+                            color = ForestInk,
                             fontSize = if (isSeniorMode) 13.sp else 11.sp,
-                            fontWeight = FontWeight.Normal,
+                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -337,9 +372,9 @@ fun RailAppTopBar(
 
                     Text(
                         text = "Not Tracking",
-                        color = Color(0xFF94A3B8),
+                        color = CharcoalTextMuted,
                         fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -353,112 +388,232 @@ fun RailBottomNavBar(
     onTabSelected: (AppNavTab) -> Unit,
     language: IndianLanguage,
     role: UserRole,
-    isSeniorMode: Boolean
+    isSeniorMode: Boolean,
+    modifier: Modifier = Modifier
 ) {
-    NavigationBar(
-        containerColor = WarmSurface,
-        contentColor = CharcoalText,
-        tonalElevation = 8.dp,
-        modifier = Modifier.navigationBarsPadding()
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(start = 14.dp, end = 14.dp, bottom = 12.dp, top = 4.dp),
+        contentAlignment = Alignment.Center
     ) {
-        NavigationBarItem(
-            selected = activeTab == AppNavTab.HOME,
-            onClick = { onTabSelected(AppNavTab.HOME) },
-            icon = {
-                Icon(
-                    imageVector = if (activeTab == AppNavTab.HOME) Icons.Filled.Fastfood else Icons.Outlined.Fastfood,
-                    contentDescription = "Home"
+        // Floating Pill Container with Translucent Liquid Frosted Glass Styling
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = 12.dp,
+                    shape = RoundedCornerShape(36.dp),
+                    spotColor = Color(0x38000000),
+                    ambientColor = Color(0x1A000000)
                 )
-            },
-            label = {
-                Text(
-                    text = LocalizationManager.getString("nav_home", language),
-                    fontSize = if (isSeniorMode) 13.sp else 11.sp,
-                    fontWeight = if (activeTab == AppNavTab.HOME) FontWeight.Bold else FontWeight.Normal
+                .clip(RoundedCornerShape(36.dp))
+                .background(
+                    // Translucent Frosted Glass - content underneath is visible through the glass!
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            Color(0xC8FFFFFF), // 78% translucent frosted white
+                            Color(0x95FAF7EE), // 58% translucent warm tone
+                            Color(0xB8FFFFFF)  // 72% translucent frosted white
+                        )
+                    )
                 )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = RailNavy,
-                indicatorColor = Color(0xFFDBEAFE),
-                selectedTextColor = RailNavy
-            ),
-            modifier = Modifier.testTag("nav_home_btn")
-        )
+                .border(
+                    BorderStroke(
+                        1.5.dp,
+                        Brush.linearGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.95f),
+                                Color.White.copy(alpha = 0.45f),
+                                ForestInk.copy(alpha = 0.18f),
+                                Color.White.copy(alpha = 0.85f)
+                            )
+                        )
+                    ),
+                    RoundedCornerShape(36.dp)
+                )
+        ) {
+            // Liquid Specular Highlight Reflection on Top Arc
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(26.dp)
+                    .clip(RoundedCornerShape(topStart = 36.dp, topEnd = 36.dp))
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.80f),
+                                Color.White.copy(alpha = 0.20f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
 
-        NavigationBarItem(
-            selected = activeTab == AppNavTab.COACH_RADAR,
-            onClick = { onTabSelected(AppNavTab.COACH_RADAR) },
-            icon = {
-                Icon(
-                    imageVector = if (activeTab == AppNavTab.COACH_RADAR) Icons.Filled.AccountTree else Icons.Outlined.AccountTree,
-                    contentDescription = "Radar"
+            // Inner Tabs Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                horizontalArrangement = Arrangement.SpaceAround,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Tab 1: HOME
+                GlassyNavTabItem(
+                    selected = activeTab == AppNavTab.HOME,
+                    title = LocalizationManager.getString("nav_home", language),
+                    iconFilled = Icons.Filled.Home,
+                    iconOutlined = Icons.Outlined.Home,
+                    isSeniorMode = isSeniorMode,
+                    testTag = "nav_home_btn",
+                    modifier = Modifier.weight(1f),
+                    onClick = { onTabSelected(AppNavTab.HOME) }
                 )
-            },
-            label = {
-                Text(
-                    text = LocalizationManager.getString("nav_coach_radar", language),
-                    fontSize = if (isSeniorMode) 13.sp else 11.sp,
-                    fontWeight = if (activeTab == AppNavTab.COACH_RADAR) FontWeight.Bold else FontWeight.Normal
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = RailNavy,
-                indicatorColor = Color(0xFFDBEAFE),
-                selectedTextColor = RailNavy
-            ),
-            modifier = Modifier.testTag("nav_radar_btn")
-        )
 
-        NavigationBarItem(
-            selected = activeTab == AppNavTab.BUDGET_LEDGER,
-            onClick = { onTabSelected(AppNavTab.BUDGET_LEDGER) },
-            icon = {
-                Icon(
-                    imageVector = if (activeTab == AppNavTab.BUDGET_LEDGER) Icons.Filled.ReceiptLong else Icons.Outlined.ReceiptLong,
-                    contentDescription = "Budget"
+                // Tab 2: RADAR
+                GlassyNavTabItem(
+                    selected = activeTab == AppNavTab.COACH_RADAR,
+                    title = LocalizationManager.getString("nav_coach_radar", language),
+                    iconFilled = Icons.Filled.AccountTree,
+                    iconOutlined = Icons.Outlined.AccountTree,
+                    isSeniorMode = isSeniorMode,
+                    testTag = "nav_radar_btn",
+                    modifier = Modifier.weight(1f),
+                    onClick = { onTabSelected(AppNavTab.COACH_RADAR) }
                 )
-            },
-            label = {
+
+                // Tab 3: BUDGET
+                GlassyNavTabItem(
+                    selected = activeTab == AppNavTab.BUDGET_LEDGER,
+                    title = if (role == UserRole.VENDOR) "Earnings" else LocalizationManager.getString("nav_budget", language),
+                    iconFilled = Icons.Filled.ReceiptLong,
+                    iconOutlined = Icons.Outlined.ReceiptLong,
+                    isSeniorMode = isSeniorMode,
+                    testTag = "nav_budget_btn",
+                    modifier = Modifier.weight(1f),
+                    onClick = { onTabSelected(AppNavTab.BUDGET_LEDGER) }
+                )
+
+                // Tab 4: PROFILE
+                GlassyNavTabItem(
+                    selected = activeTab == AppNavTab.PROFILE,
+                    title = LocalizationManager.getString("nav_profile", language),
+                    iconFilled = Icons.Filled.AccountCircle,
+                    iconOutlined = Icons.Outlined.AccountCircle,
+                    isSeniorMode = isSeniorMode,
+                    testTag = "nav_profile_btn",
+                    modifier = Modifier.weight(1f),
+                    onClick = { onTabSelected(AppNavTab.PROFILE) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun GlassyNavTabItem(
+    selected: Boolean,
+    title: String,
+    iconFilled: androidx.compose.ui.graphics.vector.ImageVector,
+    iconOutlined: androidx.compose.ui.graphics.vector.ImageVector,
+    isSeniorMode: Boolean,
+    testTag: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .height(54.dp)
+            .clip(RoundedCornerShape(27.dp))
+            .clickable { onClick() }
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        if (selected) {
+            // Liquid active droplet pill with gradient glow and specular reflection
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.95f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Marigold.copy(alpha = 0.95f),
+                                Color(0xFFFFD54F).copy(alpha = 0.92f),
+                                Color(0xFFFFB300).copy(alpha = 0.95f)
+                            )
+                        )
+                    )
+                    .border(
+                        BorderStroke(1.2.dp, ForestInk.copy(alpha = 0.30f)),
+                        RoundedCornerShape(22.dp)
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                // Liquid sheen in droplet
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(16.dp)
+                        .align(Alignment.TopCenter)
+                        .clip(RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.65f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(horizontal = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = iconFilled,
+                        contentDescription = title,
+                        tint = ForestInk,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(3.dp))
+                    Text(
+                        text = title,
+                        fontSize = if (isSeniorMode) 13.sp else 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = ForestInk,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        } else {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.padding(vertical = 2.dp)
+            ) {
+                Icon(
+                    imageVector = iconOutlined,
+                    contentDescription = title,
+                    tint = ForestInk.copy(alpha = 0.85f),
+                    modifier = Modifier.size(21.dp)
+                )
+                Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = if (role == UserRole.VENDOR) "Sales & Earning" else LocalizationManager.getString("nav_budget", language),
-                    fontSize = if (isSeniorMode) 13.sp else 11.sp,
-                    fontWeight = if (activeTab == AppNavTab.BUDGET_LEDGER) FontWeight.Bold else FontWeight.Normal,
+                    text = title,
+                    fontSize = if (isSeniorMode) 12.sp else 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ForestInk.copy(alpha = 0.88f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = RailNavy,
-                indicatorColor = Color(0xFFDBEAFE),
-                selectedTextColor = RailNavy
-            ),
-            modifier = Modifier.testTag("nav_budget_btn")
-        )
-
-        NavigationBarItem(
-            selected = activeTab == AppNavTab.PROFILE,
-            onClick = { onTabSelected(AppNavTab.PROFILE) },
-            icon = {
-                Icon(
-                    imageVector = if (activeTab == AppNavTab.PROFILE) Icons.Filled.AccountCircle else Icons.Outlined.AccountCircle,
-                    contentDescription = "Profile"
-                )
-            },
-            label = {
-                Text(
-                    text = LocalizationManager.getString("nav_profile", language),
-                    fontSize = if (isSeniorMode) 13.sp else 11.sp,
-                    fontWeight = if (activeTab == AppNavTab.PROFILE) FontWeight.Bold else FontWeight.Normal,
-                    maxLines = 1
-                )
-            },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = RailNavy,
-                indicatorColor = Color(0xFFDBEAFE),
-                selectedTextColor = RailNavy
-            ),
-            modifier = Modifier.testTag("nav_profile_btn")
-        )
+            }
+        }
     }
 }
 

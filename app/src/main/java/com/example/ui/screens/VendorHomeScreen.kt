@@ -22,12 +22,20 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Balance
+import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.DirectionsTransit
+import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.Handshake
+import androidx.compose.material.icons.filled.HelpOutline
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.NotificationsActive
-import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Paid
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.Storefront
+import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -40,6 +48,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -62,16 +71,25 @@ import com.example.data.model.OrderStatus
 import com.example.data.model.TrainCandidate
 import com.example.data.repository.TrainRouteDetails
 import com.example.ui.components.ContextualHintCard
-import com.example.ui.theme.CharcoalText
-import com.example.ui.theme.CharcoalTextMuted
-import com.example.ui.theme.GoldYellow
-import com.example.ui.theme.GoldYellowLight
-import com.example.ui.theme.NatureGreen
-import com.example.ui.theme.RailNavy
-import com.example.ui.theme.TerracottaAmber
-import com.example.ui.theme.WarmBorder
-import com.example.ui.theme.WarmSandBackground
-import com.example.ui.theme.WarmSurface
+import com.example.ui.components.RailMadadDialog
+import com.example.ui.components.UserGuidanceModal
+import com.example.ui.components.UserGuideAudience
+import com.example.ui.components.VendorInteractiveTutorialDialog
+import com.example.ui.theme.ForestInk
+import com.example.ui.theme.ForestPillButton
+import com.example.ui.theme.Marigold
+import com.example.ui.theme.MarigoldPillButton
+import com.example.ui.theme.OutlinedPillButton
+import com.example.ui.theme.Parchment
+import com.example.ui.theme.SunlitCream
+import com.example.ui.theme.SunlitStampedCard
+
+enum class VendorOperationalTab(val label: String) {
+    NEW_REQUESTS("New Requests"),
+    ACCEPTED_ORDERS("Accepted Orders"),
+    COMPLETED_ORDERS("Completed"),
+    HELP("Help & Guide")
+}
 
 @Composable
 fun VendorHomeScreen(
@@ -94,7 +112,9 @@ fun VendorHomeScreen(
     onAcceptAndOfferPrice: (FoodRequestEntity, VendorEntity, Int) -> Unit,
     onDeliverSale: (FoodRequestEntity, VendorEntity) -> Unit,
     onQuickManualSale: (vendor: VendorEntity, foodName: String, amount: Double, coach: String) -> Unit,
-    availableCoaches: List<String> = emptyList()
+    availableCoaches: List<String> = emptyList(),
+    onToggleAvailability: (Boolean) -> Unit = {},
+    onRejectRequest: (FoodRequestEntity) -> Unit = {}
 ) {
     val currentVendor = vendor ?: (allVendors.firstOrNull() ?: VendorEntity(
         vendorId = "vendor_jhalmuri_1",
@@ -109,21 +129,33 @@ fun VendorHomeScreen(
         todayEarnings = 40.0
     ))
 
-    var isOnline by remember { mutableStateOf(currentVendor.isOnline) }
-    val coachList = if (availableCoaches.isNotEmpty()) {
-        availableCoaches
-    } else if (selectedRoute?.coachCodes?.isNotEmpty() == true) {
-        selectedRoute.coachCodes
-    } else {
-        listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+    var isOnline by remember(currentVendor.vendorId, currentVendor.isOnline) {
+        mutableStateOf(currentVendor.isOnline)
     }
+
+    var selectedTab by remember { mutableStateOf(VendorOperationalTab.NEW_REQUESTS) }
 
     // Selected unit price for pending requests: Map<RequestId, UnitPrice>
     val selectedPrices = remember { mutableStateMapOf<Long, Int>() }
 
+    var showVendorGuide by remember { mutableStateOf(false) }
+    var showVendorMadad by remember { mutableStateOf(false) }
+    var showTutorialDialog by remember { mutableStateOf(false) }
+
+    // Group requests by status
+    val pendingRequests = activeRequests.filter {
+        it.status == OrderStatus.REQUESTED.name || it.status == OrderStatus.OFFERED_TO_VENDOR.name
+    }
+    val acceptedOrders = activeRequests.filter {
+        it.status == OrderStatus.PRICE_CONFIRMED.name || it.status == OrderStatus.CUSTOMER_CONFIRMED.name
+    }
+    val completedOrders = activeRequests.filter {
+        it.status == OrderStatus.COMPLETED.name
+    }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = WarmSandBackground
+        color = SunlitCream
     ) {
         LazyColumn(
             modifier = Modifier
@@ -132,253 +164,77 @@ fun VendorHomeScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             item {
-                Spacer(modifier = Modifier.height(6.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                // Vendor Active Profile Card
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
+                // Section 6: Header with RailSaathi, Availability Status, and Reconnect/Sync State
+                SunlitStampedCard(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("vendor_primary_header_card"),
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 5.dp
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(CircleShape)
-                                        .background(TerracottaAmber),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Storefront,
-                                        contentDescription = "Vendor",
-                                        tint = Color.White
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Column {
-                                    Text(
-                                        text = currentVendor.name,
-                                        fontSize = if (isSeniorMode) 18.sp else 16.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = CharcoalText
-                                    )
-                                    Text(
-                                        text = "Badge: ${currentVendor.badgeNumber} • ${currentVendor.specialityItemName}",
-                                        fontSize = 12.sp,
-                                        color = CharcoalTextMuted
-                                    )
-                                }
-                            }
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column {
                                 Text(
-                                    text = if (isOnline) "ONLINE" else "OFFLINE",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isOnline) NatureGreen else CharcoalTextMuted
+                                    text = "RailSaathi",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = ForestInk
                                 )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Switch(
-                                    checked = isOnline,
-                                    onCheckedChange = { isOnline = it },
-                                    colors = SwitchDefaults.colors(
-                                        checkedThumbColor = Color.White,
-                                        checkedTrackColor = NatureGreen
-                                    ),
-                                    modifier = Modifier.testTag("vendor_online_switch")
+                                Text(
+                                    text = "VENDOR DASHBOARD",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 1.sp,
+                                    color = ForestInk.copy(alpha = 0.7f)
                                 )
                             }
-                        }
 
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Switch vendor identity row
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            allVendors.forEach { v ->
-                                val isSelected = v.vendorId == currentVendor.vendorId
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(if (isSelected) RailNavy else Color(0xFFF1F5F9))
-                                        .clickable { onSelectVendorProfile(v.vendorId) }
-                                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                                ) {
-                                    Text(
-                                        text = v.name,
-                                        color = if (isSelected) Color.White else CharcoalText,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            // Availability Status Control
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(1440.dp))
+                                    .background(if (isOnline) Color(0xFFE8F8EE) else Color(0xFFFDE8E8))
+                                    .border(
+                                        BorderStroke(1.5.dp, if (isOnline) Color(0xFF1E8E3E) else Color(0xFFD93025)),
+                                        RoundedCornerShape(1440.dp)
                                     )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Vendor Train Shift Status
-            item {
-                if (journeySession != null) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = RailNavy)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
+                                    .clickable {
+                                        val newStatus = !isOnline
+                                        isOnline = newStatus
+                                        onToggleAvailability(newStatus)
+                                    }
+                                    .padding(horizontal = 14.dp, vertical = 7.dp)
+                                    .testTag("vendor_availability_toggle_btn")
+                            ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Box(
                                         modifier = Modifier
                                             .size(8.dp)
                                             .clip(CircleShape)
-                                            .background(NatureGreen)
+                                            .background(if (isOnline) Color(0xFF1E8E3E) else Color(0xFFD93025))
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "ACTIVE SHIFT ONBOARD",
-                                        color = NatureGreen,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
+                                        text = if (isOnline) "Available" else "Not Available",
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 12.sp,
+                                        color = if (isOnline) Color(0xFF1E8E3E) else Color(0xFFD93025)
                                     )
                                 }
-                                Text(
-                                    text = "${journeySession.trainName} • Coach ${journeySession.currentCoach}",
-                                    color = Color.White,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-
-                            OutlinedButton(
-                                onClick = onEndShift,
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                                border = BorderStroke(1.dp, Color(0x66FFFFFF)),
-                                shape = RoundedCornerShape(8.dp)
-                            ) {
-                                Icon(imageVector = Icons.Default.Stop, contentDescription = "End", modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("End Shift", fontSize = 11.sp)
                             }
                         }
-                    }
-                } else {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEFF6FF)),
-                        border = BorderStroke(1.dp, Color(0xFFBFDBFE))
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Text(
-                                text = "Station Standby • Select Train to Board Shift",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = RailNavy
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = if (locationInfo.isNearStation && locationInfo.nearestStation != null) {
-                                    "Near ${locationInfo.nearestStation.nameEn} Station. Pick train below to start receiving passenger hunger signals."
-                                } else {
-                                    "Ready to hawk? Choose train schedule to begin vending session."
-                                },
-                                fontSize = 12.sp,
-                                color = CharcoalTextMuted
-                            )
 
-                            if (stationCandidates.isNotEmpty()) {
-                                Spacer(modifier = Modifier.height(8.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState()),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    stationCandidates.take(3).forEach { candidate ->
-                                        Button(
-                                            onClick = { onStartShift(candidate, "VND-1") },
-                                            colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
-                                            shape = RoundedCornerShape(8.dp)
-                                        ) {
-                                            Icon(imageVector = Icons.Default.PlayArrow, contentDescription = "Start", modifier = Modifier.size(14.dp))
-                                            Spacer(modifier = Modifier.width(4.dp))
-                                            Text("Board ${candidate.trainName}", fontSize = 11.sp)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+                        Spacer(modifier = Modifier.height(8.dp))
 
-            // Fair Income Distribution Banner
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = GoldYellowLight),
-                    border = BorderStroke(1.dp, GoldYellow)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Balance,
-                            contentDescription = "Fair Income Distribution",
-                            tint = Color(0xFF92400E),
-                            modifier = Modifier.size(24.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Column {
-                            Text(
-                                text = "Fair Income Dispatch Priority Active",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = if (isSeniorMode) 14.sp else 12.sp,
-                                color = Color(0xFF92400E)
-                            )
-                            Text(
-                                text = "Vendors with lower sales today receive hunger alerts first for equal daily earnings.",
-                                fontSize = 11.sp,
-                                color = CharcoalText
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Coach Boarding & Conflict Prevention Guide
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
+                        // Offline-First / Reconnect sync state indicator
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -386,199 +242,380 @@ fun VendorHomeScreen(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
-                                    imageVector = Icons.Default.Shield,
-                                    contentDescription = "Collision Guard",
-                                    tint = NatureGreen,
-                                    modifier = Modifier.size(20.dp)
+                                    imageVector = Icons.Default.Sync,
+                                    contentDescription = "Sync State",
+                                    tint = ForestInk.copy(alpha = 0.7f),
+                                    modifier = Modifier.size(13.dp)
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
+                                Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Coach Guard & Boarding",
-                                    fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalText
+                                    text = if (isOnline) "Live Engine Active • Connected" else "Standby Mode • Accepted orders stay active",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = ForestInk.copy(alpha = 0.8f)
                                 )
                             }
 
                             Text(
-                                text = "Current: Coach ${currentVendor.currentCoach}",
-                                fontSize = 12.sp,
+                                text = "Badge: ${currentVendor.badgeNumber}",
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TerracottaAmber
+                                color = ForestInk
                             )
                         }
+                    }
+                }
+            }
 
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Tap a coach to verify collision: prevents duplicate vendors selling ${currentVendor.specialityItemName} in the same coach.",
-                            fontSize = 11.sp,
-                            color = CharcoalTextMuted
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Coach selector
+            // Section 6: Current train/journey context & Current station/operating area
+            item {
+                SunlitStampedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    containerColor = if (journeySession != null) ForestInk else Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            coachList.forEach { coach ->
-                                val isCurrent = currentVendor.currentCoach == coach
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = if (journeySession != null) "CURRENT TRAIN & COACH" else "OPERATING AREA / STATION",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    letterSpacing = 0.8.sp,
+                                    color = if (journeySession != null) Marigold else ForestInk.copy(alpha = 0.7f)
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = if (journeySession != null) {
+                                        "${journeySession.trainName} • Coach ${journeySession.currentCoach}"
+                                    } else {
+                                        val stationName = locationInfo.nearestStation?.nameEn ?: currentVendor.currentStation
+                                        "$stationName Station Standby"
+                                    },
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (journeySession != null) SunlitCream else ForestInk
+                                )
+                            }
+
+                            if (journeySession != null) {
+                                MarigoldPillButton(
+                                    onClick = onEndShift,
+                                    text = "End Shift"
+                                )
+                            } else if (stationCandidates.isNotEmpty()) {
+                                ForestPillButton(
+                                    onClick = { onStartShift(stationCandidates.first(), "VND-1") },
+                                    text = "Board Train"
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Section 6: Main Actions Tabs (New Requests, Accepted Orders, Completed Orders, Help)
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // New Requests Tab
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(1440.dp))
+                            .background(if (selectedTab == VendorOperationalTab.NEW_REQUESTS) ForestInk else Parchment)
+                            .border(BorderStroke(1.2.dp, ForestInk), RoundedCornerShape(1440.dp))
+                            .clickable { selectedTab = VendorOperationalTab.NEW_REQUESTS }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                            .testTag("vendor_tab_new_requests")
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "New Requests",
+                                color = if (selectedTab == VendorOperationalTab.NEW_REQUESTS) SunlitCream else ForestInk,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            if (pendingRequests.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(6.dp))
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isCurrent) TerracottaAmber else WarmSurface)
-                                        .border(1.dp, if (isCurrent) TerracottaAmber else WarmBorder, RoundedCornerShape(8.dp))
-                                        .clickable {
-                                            onVerifyCoachBoarding(
-                                                currentVendor.vendorId,
-                                                currentVendor.specialityItemId,
-                                                coach
-                                            )
-                                        }
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                                        .testTag("vendor_coach_$coach")
+                                        .clip(CircleShape)
+                                        .background(if (selectedTab == VendorOperationalTab.NEW_REQUESTS) Marigold else ForestInk)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        text = coach,
-                                        color = if (isCurrent) Color.White else CharcoalText,
-                                        fontSize = if (isSeniorMode) 15.sp else 13.sp,
-                                        fontWeight = FontWeight.Bold
+                                        text = "${pendingRequests.size}",
+                                        color = if (selectedTab == VendorOperationalTab.NEW_REQUESTS) ForestInk else SunlitCream,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Accepted Orders Tab
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(1440.dp))
+                            .background(if (selectedTab == VendorOperationalTab.ACCEPTED_ORDERS) ForestInk else Parchment)
+                            .border(BorderStroke(1.2.dp, ForestInk), RoundedCornerShape(1440.dp))
+                            .clickable { selectedTab = VendorOperationalTab.ACCEPTED_ORDERS }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                            .testTag("vendor_tab_accepted_orders")
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Accepted Orders",
+                                color = if (selectedTab == VendorOperationalTab.ACCEPTED_ORDERS) SunlitCream else ForestInk,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                            if (acceptedOrders.isNotEmpty()) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(CircleShape)
+                                        .background(if (selectedTab == VendorOperationalTab.ACCEPTED_ORDERS) Marigold else ForestInk)
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "${acceptedOrders.size}",
+                                        color = if (selectedTab == VendorOperationalTab.ACCEPTED_ORDERS) ForestInk else SunlitCream,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Completed Orders Tab
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(1440.dp))
+                            .background(if (selectedTab == VendorOperationalTab.COMPLETED_ORDERS) ForestInk else Parchment)
+                            .border(BorderStroke(1.2.dp, ForestInk), RoundedCornerShape(1440.dp))
+                            .clickable { selectedTab = VendorOperationalTab.COMPLETED_ORDERS }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                            .testTag("vendor_tab_completed_orders")
+                    ) {
+                        Text(
+                            text = "Completed (${completedOrders.size + currentVendor.todaySalesCount})",
+                            color = if (selectedTab == VendorOperationalTab.COMPLETED_ORDERS) SunlitCream else ForestInk,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+
+                    // Help Tab
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(1440.dp))
+                            .background(if (selectedTab == VendorOperationalTab.HELP) ForestInk else Parchment)
+                            .border(BorderStroke(1.2.dp, ForestInk), RoundedCornerShape(1440.dp))
+                            .clickable { selectedTab = VendorOperationalTab.HELP }
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                            .testTag("vendor_tab_help")
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.HelpOutline,
+                                contentDescription = "Help",
+                                tint = if (selectedTab == VendorOperationalTab.HELP) SunlitCream else ForestInk,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Help",
+                                color = if (selectedTab == VendorOperationalTab.HELP) SunlitCream else ForestInk,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+                    }
+                }
+            }
+
+            // -----------------------------------------------------------------
+            // TAB 1: NEW REQUESTS (Section 7: Clear Hierarchy & Immediate Action)
+            // -----------------------------------------------------------------
+            if (selectedTab == VendorOperationalTab.NEW_REQUESTS) {
+                if (!isOnline) {
+                    item {
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("vendor_not_available_banner"),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF7E0)),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.5.dp, Color(0xFFF29900))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.WarningAmber,
+                                    contentDescription = "Warning",
+                                    tint = Color(0xFFF29900),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = "You are currently marked as Not Available",
+                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 13.sp,
+                                        color = ForestInk
+                                    )
+                                    Text(
+                                        text = "Toggle your status to 'Available' above to accept new passenger requests.",
+                                        fontSize = 11.sp,
+                                        color = ForestInk.copy(alpha = 0.8f)
                                     )
                                 }
                             }
                         }
                     }
                 }
-            }
 
-            // Live Passenger Hunger Orders Feed
-            if (!vendorHintShown) {
-                item {
-                    ContextualHintCard(
-                        title = "New request",
-                        description = "Accept a request and choose your selling price.",
-                        onDismiss = onDismissVendorHint,
-                        testTag = "hint_vendor_new_request"
-                    )
-                }
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.NotificationsActive,
-                            contentDescription = "Live Requests",
-                            tint = TerracottaAmber,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = "Live Passenger Signals (${activeRequests.size})",
-                            fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = RailNavy
-                        )
-                    }
-                }
-            }
-
-            if (activeRequests.isEmpty()) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                        shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, WarmBorder)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(24.dp),
-                            contentAlignment = Alignment.Center
+                if (pendingRequests.isEmpty()) {
+                    item {
+                        SunlitStampedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = Parchment,
+                            borderColor = ForestInk,
+                            shadowOffset = 4.dp
                         ) {
-                            Text(
-                                text = "Scanning train coaches for hunger requests... You're ready to serve!",
-                                fontSize = 13.sp,
-                                color = CharcoalTextMuted
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(28.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        imageVector = Icons.Default.NotificationsActive,
+                                        contentDescription = "Listening",
+                                        tint = ForestInk.copy(alpha = 0.5f),
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(10.dp))
+                                    Text(
+                                        text = "No pending food requests right now.",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = ForestInk
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "You will be alerted instantly when passengers signal hunger!",
+                                        fontSize = 12.sp,
+                                        color = ForestInk.copy(alpha = 0.7f)
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-            } else {
-                items(activeRequests) { req ->
-                    val chosenPrice = selectedPrices[req.id] ?: (req.offeredUnitPrice ?: 15)
+                } else {
+                    items(pendingRequests) { req ->
+                        val chosenPrice = selectedPrices[req.id] ?: (req.offeredUnitPrice ?: 15)
 
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (req.assignedVendorId == currentVendor.vendorId) Color(0xFFEFF6FF) else WarmSurface
-                        ),
-                        border = BorderStroke(1.dp, WarmBorder)
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                        SunlitStampedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("vendor_request_card_${req.id}"),
+                            containerColor = Parchment,
+                            borderColor = ForestInk,
+                            shadowOffset = 5.dp
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
+                                // Request Header
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))
-                                            .background(RailNavy)
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                            .background(Marigold)
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(
+                                            text = "NEW FOOD REQUEST",
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 11.sp,
+                                            color = ForestInk
+                                        )
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(1440.dp))
+                                            .background(ForestInk)
+                                            .padding(horizontal = 10.dp, vertical = 4.dp)
                                     ) {
                                         Text(
                                             text = "Coach ${req.coachNumber}",
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold,
+                                            color = SunlitCream,
+                                            fontWeight = FontWeight.ExtraBold,
                                             fontSize = 12.sp
                                         )
                                     }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Text(
-                                        text = "${req.foodItemName} × ${req.quantity}",
-                                        fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = CharcoalText
-                                    )
                                 }
 
-                                Text(
-                                    text = if (req.offeredUnitPrice != null) "₹${req.calculatedTotalPrice}" else "Pending Price",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TerracottaAmber
-                                )
-                            }
+                                Spacer(modifier = Modifier.height(12.dp))
 
-                            if (req.seatDetail.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Seat Note: ${req.seatDetail}",
-                                    fontSize = 12.sp,
-                                    color = CharcoalTextMuted
-                                )
-                            }
+                                // Clear Information Hierarchy (Section 7)
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Text(
+                                        text = "${req.foodItemName} × ${req.quantity}",
+                                        fontSize = 17.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = ForestInk
+                                    )
+                                    Text(
+                                        text = "Train: ${req.trainName.ifBlank { req.trainNumber }}",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = ForestInk
+                                    )
+                                    if (req.targetStationName.isNotBlank() || req.targetStationCode.isNotBlank()) {
+                                        Text(
+                                            text = "Target Station: ${req.targetStationName} (${req.targetStationCode})",
+                                            fontSize = 12.sp,
+                                            color = ForestInk.copy(alpha = 0.8f)
+                                        )
+                                    }
+                                    if (req.seatDetail.isNotBlank()) {
+                                        Text(
+                                            text = "Seat / Location Note: ${req.seatDetail}",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = ForestInk
+                                        )
+                                    }
+                                }
 
-                            Spacer(modifier = Modifier.height(10.dp))
+                                Spacer(modifier = Modifier.height(14.dp))
 
-                            // Step 1: Request is pending price offer from vendor
-                            if (req.status == OrderStatus.REQUESTED.name || req.status == OrderStatus.OFFERED_TO_VENDOR.name) {
+                                // Price Selector
                                 Text(
                                     text = "Select Unit Price for Passenger:",
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = CharcoalText
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                                 Spacer(modifier = Modifier.height(6.dp))
 
@@ -592,71 +629,198 @@ fun VendorHomeScreen(
                                         val isSelected = chosenPrice == price
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(6.dp))
-                                                .background(if (isSelected) RailNavy else Color(0xFFF1F5F9))
+                                                .clip(RoundedCornerShape(1440.dp))
+                                                .background(if (isSelected) ForestInk else SunlitCream)
+                                                .border(BorderStroke(1.2.dp, ForestInk), RoundedCornerShape(1440.dp))
                                                 .clickable { selectedPrices[req.id] = price }
-                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                                .padding(horizontal = 12.dp, vertical = 6.dp)
                                         ) {
                                             Text(
                                                 text = "₹$price",
-                                                color = if (isSelected) Color.White else CharcoalText,
+                                                color = if (isSelected) SunlitCream else ForestInk,
                                                 fontSize = 12.sp,
-                                                fontWeight = FontWeight.Bold
+                                                fontWeight = FontWeight.ExtraBold
                                             )
                                         }
                                     }
                                 }
 
-                                Spacer(modifier = Modifier.height(10.dp))
+                                Spacer(modifier = Modifier.height(14.dp))
 
+                                // Primary Actions: ACCEPT (Large, 52dp) and REJECT (48dp)
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "Total: ₹${chosenPrice * req.quantity}",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp,
-                                        color = CharcoalText
-                                    )
+                                    OutlinedButton(
+                                        onClick = { onRejectRequest(req) },
+                                        border = BorderStroke(1.5.dp, Color(0xFFD93025)),
+                                        shape = RoundedCornerShape(1440.dp),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .height(48.dp)
+                                            .testTag("reject_btn_${req.id}")
+                                    ) {
+                                        Text(
+                                            text = "Reject",
+                                            color = Color(0xFFD93025),
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp
+                                        )
+                                    }
 
                                     Button(
                                         onClick = { onAcceptAndOfferPrice(req, currentVendor, chosenPrice) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.testTag("offer_price_btn_${req.id}")
+                                        colors = ButtonDefaults.buttonColors(containerColor = ForestInk),
+                                        shape = RoundedCornerShape(1440.dp),
+                                        modifier = Modifier
+                                            .weight(1.8f)
+                                            .height(52.dp)
+                                            .testTag("offer_price_btn_${req.id}")
                                     ) {
-                                        Text("Offer ₹$chosenPrice / item")
+                                        Text(
+                                            text = "ACCEPT (₹${chosenPrice * req.quantity})",
+                                            color = SunlitCream,
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 13.sp
+                                        )
                                     }
                                 }
-                            } else if (req.status == OrderStatus.PRICE_CONFIRMED.name) {
+                            }
+                        }
+                    }
+                }
+            }
+
+            // -----------------------------------------------------------------
+            // TAB 2: ACCEPTED ORDERS
+            // -----------------------------------------------------------------
+            if (selectedTab == VendorOperationalTab.ACCEPTED_ORDERS) {
+                if (acceptedOrders.isEmpty()) {
+                    item {
+                        SunlitStampedCard(
+                            modifier = Modifier.fillMaxWidth(),
+                            containerColor = Parchment,
+                            borderColor = ForestInk,
+                            shadowOffset = 4.dp
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(28.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Text(
-                                    text = "Offered ₹${req.offeredUnitPrice} / item. Waiting for customer confirmation...",
-                                    fontSize = 12.sp,
-                                    color = Color(0xFFD97706),
-                                    fontWeight = FontWeight.SemiBold
+                                    text = "No accepted orders currently in progress.",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = ForestInk.copy(alpha = 0.7f)
                                 )
-                            } else if (req.status == OrderStatus.CUSTOMER_CONFIRMED.name) {
+                            }
+                        }
+                    }
+                } else {
+                    items(acceptedOrders) { req ->
+                        SunlitStampedCard(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("vendor_accepted_order_${req.id}"),
+                            containerColor = Parchment,
+                            borderColor = ForestInk,
+                            shadowOffset = 5.dp
+                        ) {
+                            Column(modifier = Modifier.padding(16.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "Confirmed! Total: ₹${req.calculatedTotalPrice}",
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = NatureGreen
-                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(1440.dp))
+                                            .background(ForestInk)
+                                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = "Coach ${req.coachNumber}",
+                                            color = SunlitCream,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 12.sp
+                                        )
+                                    }
 
+                                    Text(
+                                        text = "Total: ₹${req.calculatedTotalPrice}",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = ForestInk
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Text(
+                                    text = "${req.foodItemName} × ${req.quantity}",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = ForestInk
+                                )
+
+                                if (req.seatDetail.isNotBlank()) {
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        text = "Deliver to: ${req.seatDetail}",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = ForestInk
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                if (req.status == OrderStatus.PRICE_CONFIRMED.name) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(SunlitCream)
+                                            .border(BorderStroke(1.dp, ForestInk.copy(alpha = 0.3f)), RoundedCornerShape(8.dp))
+                                            .padding(10.dp)
+                                    ) {
+                                        Text(
+                                            text = "Offered ₹${req.offeredUnitPrice}/item. Awaiting passenger confirmation...",
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = ForestInk
+                                        )
+                                    }
+                                } else if (req.status == OrderStatus.CUSTOMER_CONFIRMED.name) {
                                     Button(
                                         onClick = { onDeliverSale(req, currentVendor) },
-                                        colors = ButtonDefaults.buttonColors(containerColor = NatureGreen),
-                                        shape = RoundedCornerShape(8.dp),
-                                        modifier = Modifier.testTag("deliver_req_${req.id}")
+                                        colors = ButtonDefaults.buttonColors(containerColor = Marigold),
+                                        shape = RoundedCornerShape(1440.dp),
+                                        border = BorderStroke(1.5.dp, ForestInk),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(52.dp)
+                                            .testTag("deliver_req_${req.id}")
                                     ) {
-                                        Text("Deliver & Collect ₹${req.calculatedTotalPrice}")
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckCircle,
+                                                contentDescription = "Deliver",
+                                                tint = ForestInk,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = "Deliver & Collect ₹${req.calculatedTotalPrice}",
+                                                color = ForestInk,
+                                                fontWeight = FontWeight.Black,
+                                                fontSize = 14.sp
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -665,60 +829,116 @@ fun VendorHomeScreen(
                 }
             }
 
-            // Quick Manual Sale Register
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+            // -----------------------------------------------------------------
+            // TAB 3: COMPLETED ORDERS & EARNINGS SUMMARY
+            // -----------------------------------------------------------------
+            if (selectedTab == VendorOperationalTab.COMPLETED_ORDERS) {
+                item {
+                    // Earnings Summary Card
+                    SunlitStampedCard(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("vendor_earnings_summary_card"),
+                        containerColor = Parchment,
+                        borderColor = ForestInk,
+                        shadowOffset = 5.dp
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                text = "Quick Sale Cash Register",
-                                fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = CharcoalText
+                                text = "Today's Earnings Summary",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Black,
+                                color = ForestInk
                             )
-
-                            Text(
-                                text = "Today's Total: ₹${currentVendor.todayEarnings.toInt()}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NatureGreen
-                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        text = "Total Sales Revenue",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = ForestInk.copy(alpha = 0.7f)
+                                    )
+                                    Text(
+                                        text = "₹${currentVendor.todayEarnings.toInt()}",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = ForestInk
+                                    )
+                                }
+                                Column(horizontalAlignment = Alignment.End) {
+                                    Text(
+                                        text = "Items Delivered",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = ForestInk.copy(alpha = 0.7f)
+                                    )
+                                    Text(
+                                        text = "${currentVendor.todaySalesCount}",
+                                        fontSize = 24.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = ForestInk
+                                    )
+                                }
+                            }
                         }
+                    }
+                }
 
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        // Quick buttons (+10, +15, +20, +30)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf(10, 15, 20, 30).forEach { amt ->
-                                Button(
-                                    onClick = {
-                                        onQuickManualSale(
-                                            currentVendor,
-                                            currentVendor.specialityItemName,
-                                            amt.toDouble(),
-                                            currentVendor.currentCoach
+                // Quick Cash Register for Platform Walk-Ups
+                item {
+                    SunlitStampedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        containerColor = Parchment,
+                        borderColor = ForestInk,
+                        shadowOffset = 4.dp
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp)) {
+                            Text(
+                                text = "Quick Walk-Up Sale Register",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = ForestInk
+                            )
+                            Text(
+                                text = "Record platform or corridor cash sales instantly:",
+                                fontSize = 11.sp,
+                                color = ForestInk.copy(alpha = 0.7f)
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(10, 15, 20, 30).forEach { amt ->
+                                    Box(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clip(RoundedCornerShape(1440.dp))
+                                            .background(SunlitCream)
+                                            .border(BorderStroke(1.5.dp, ForestInk), RoundedCornerShape(1440.dp))
+                                            .clickable {
+                                                onQuickManualSale(
+                                                    currentVendor,
+                                                    currentVendor.specialityItemName,
+                                                    amt.toDouble(),
+                                                    currentVendor.currentCoach
+                                                )
+                                            }
+                                            .padding(vertical = 10.dp)
+                                            .testTag("quick_add_$amt"),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "+₹$amt",
+                                            color = ForestInk,
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 13.sp
                                         )
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .testTag("quick_add_$amt"),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEFF6FF)),
-                                    shape = RoundedCornerShape(8.dp),
-                                    border = BorderStroke(1.dp, Color(0xFF93C5FD))
-                                ) {
-                                    Text("+₹$amt", color = RailNavy, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
                         }
@@ -726,9 +946,172 @@ fun VendorHomeScreen(
                 }
             }
 
+            // -----------------------------------------------------------------
+            // TAB 4: HELP & TOOLS
+            // -----------------------------------------------------------------
+            if (selectedTab == VendorOperationalTab.HELP) {
+                // Interactive Tutorial Replay
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(BorderStroke(1.5.dp, ForestInk), RoundedCornerShape(14.dp))
+                            .clickable { showTutorialDialog = true }
+                            .testTag("vendor_replay_tutorial_card"),
+                        colors = CardDefaults.cardColors(containerColor = Marigold)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Parchment)
+                                    .border(BorderStroke(1.dp, ForestInk), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Campaign,
+                                    contentDescription = "Tutorial",
+                                    tint = ForestInk,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Replay Vendor Tutorial",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
+                                )
+                                Text(
+                                    text = "Interactive 5-step guide on orders, pricing, and delivery",
+                                    fontSize = 11.sp,
+                                    color = ForestInk.copy(alpha = 0.8f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Vendor Handbook
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(BorderStroke(1.5.dp, ForestInk), RoundedCornerShape(14.dp))
+                            .clickable { showVendorGuide = true }
+                            .testTag("vendor_guide_handbook_card"),
+                        colors = CardDefaults.cardColors(containerColor = Parchment)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFE8F0FE)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.MenuBook,
+                                    contentDescription = "Handbook",
+                                    tint = ForestInk,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Vendor Handbook & Guidelines",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
+                                )
+                                Text(
+                                    text = "Authorized hawker rules and suburban route guidelines",
+                                    fontSize = 11.sp,
+                                    color = ForestInk.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Rail Madad 139
+                item {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(14.dp))
+                            .border(BorderStroke(1.5.dp, ForestInk), RoundedCornerShape(14.dp))
+                            .clickable { showVendorMadad = true }
+                            .testTag("vendor_rail_madad_card"),
+                        colors = CardDefaults.cardColors(containerColor = Parchment)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(14.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFFCE8E6)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Handshake,
+                                    contentDescription = "Rail Madad",
+                                    tint = Color(0xFFD93025),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    text = "Rail Madad 139 & RPF Emergency",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
+                                )
+                                Text(
+                                    text = "Emergency helpline, medical assistance, and RPF contact",
+                                    fontSize = 11.sp,
+                                    color = ForestInk.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(96.dp))
             }
         }
+
+        UserGuidanceModal(
+            isOpen = showVendorGuide,
+            onDismiss = { showVendorGuide = false },
+            initialAudience = UserGuideAudience.SUBURBAN_VENDOR
+        )
+
+        RailMadadDialog(
+            isOpen = showVendorMadad,
+            onDismiss = { showVendorMadad = false }
+        )
+
+        VendorInteractiveTutorialDialog(
+            isOpen = showTutorialDialog,
+            onDismiss = { showTutorialDialog = false }
+        )
     }
 }

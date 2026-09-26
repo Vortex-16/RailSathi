@@ -45,11 +45,36 @@ interface FoodRequestDao {
     @Query("SELECT * FROM food_requests WHERE assignedVendorId = :vendorId ORDER BY timestamp DESC")
     fun getRequestsForVendor(vendorId: String): Flow<List<FoodRequestEntity>>
 
+    @Query("SELECT * FROM food_requests WHERE trainNumber = :trainNumber AND coachNumber = :coachNumber AND status IN ('REQUESTED', 'MATCHING', 'OFFERED_TO_VENDOR') ORDER BY timestamp ASC")
+    suspend fun getPendingRequestsByTrainAndCoach(trainNumber: String, coachNumber: String): List<FoodRequestEntity>
+
+    @Query("SELECT * FROM food_requests WHERE trainNumber = :trainNumber AND targetStationCode = :stationCode AND status IN ('REQUESTED', 'MATCHING', 'OFFERED_TO_VENDOR') ORDER BY timestamp ASC")
+    suspend fun getPendingRequestsByTrainAndStation(trainNumber: String, stationCode: String): List<FoodRequestEntity>
+
+    @Query("SELECT * FROM food_requests WHERE trainNumber = :trainNumber AND coachNumber = :coachNumber AND targetStationCode = :stationCode AND status IN ('REQUESTED', 'MATCHING', 'OFFERED_TO_VENDOR') ORDER BY timestamp ASC")
+    suspend fun getPendingRequestsByTrainCoachStation(trainNumber: String, coachNumber: String, stationCode: String): List<FoodRequestEntity>
+
+    @Query("SELECT * FROM food_requests WHERE trainInstanceId = :trainInstanceId AND status IN ('REQUESTED', 'MATCHING', 'OFFERED_TO_VENDOR') ORDER BY timestamp ASC")
+    suspend fun getPendingRequestsByTrainInstance(trainInstanceId: String): List<FoodRequestEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertRequest(request: FoodRequestEntity): Long
 
     @Update
     suspend fun updateRequest(request: FoodRequestEntity)
+
+    // Atomic vendor claim operation (Section 3 Scenario A / Test A-05)
+    // Ensures only one vendor succeeds if multiple vendors simultaneously attempt to claim
+    @Query("UPDATE food_requests SET status = 'VENDOR_ACCEPTED', assignedVendorId = :vendorId, assignedVendorName = :vendorName WHERE id = :id AND status IN ('REQUESTED', 'MATCHING', 'OFFERED_TO_VENDOR')")
+    suspend fun atomicClaimRequest(id: Long, vendorId: String, vendorName: String): Int
+
+    // Atomic state transition with prerequisite status check
+    @Query("UPDATE food_requests SET status = :newStatus WHERE id = :id AND status = :expectedStatus")
+    suspend fun atomicTransitionStatus(id: Long, expectedStatus: String, newStatus: String): Int
+
+    // Update coach only before vendor acceptance (Scenario B Test 7-10)
+    @Query("UPDATE food_requests SET coachNumber = :newCoach WHERE id = :id AND status IN ('REQUESTED', 'MATCHING')")
+    suspend fun updateCoachIfPending(id: Long, newCoach: String): Int
 
     @Query("UPDATE food_requests SET status = :status, assignedVendorId = :vendorId, assignedVendorName = :vendorName WHERE id = :id")
     suspend fun updateRequestStatus(id: Long, status: String, vendorId: String?, vendorName: String?)
@@ -69,11 +94,20 @@ interface OrderDao {
     @Query("SELECT * FROM orders ORDER BY createdAt DESC")
     fun getAllOrders(): Flow<List<OrderEntity>>
 
+    @Query("SELECT * FROM orders WHERE orderId = :orderId LIMIT 1")
+    suspend fun getOrderById(orderId: String): OrderEntity?
+
+    @Query("SELECT * FROM orders WHERE clientOrderId = :clientOrderId LIMIT 1")
+    suspend fun getOrderByClientOrderId(clientOrderId: String): OrderEntity?
+
     @Query("SELECT * FROM orders WHERE vendorId = :vendorId ORDER BY createdAt DESC")
     fun getOrdersByVendor(vendorId: String): Flow<List<OrderEntity>>
 
     @Query("SELECT * FROM orders WHERE customerId = :customerId ORDER BY createdAt DESC")
     fun getOrdersByCustomer(customerId: String): Flow<List<OrderEntity>>
+
+    @Query("SELECT * FROM orders WHERE trainNumber = :trainNumber AND coachNumber = :coachNumber ORDER BY createdAt DESC")
+    suspend fun getOrdersByTrainAndCoach(trainNumber: String, coachNumber: String): List<OrderEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertOrder(order: OrderEntity)
@@ -81,8 +115,11 @@ interface OrderDao {
     @Update
     suspend fun updateOrder(order: OrderEntity)
 
-    @Query("UPDATE orders SET status = 'COMPLETED', completedAt = :completedAt, paymentStatus = 'PAID' WHERE orderId = :orderId")
-    suspend fun markOrderCompleted(orderId: String, completedAt: Long = System.currentTimeMillis())
+    @Query("UPDATE orders SET status = 'COMPLETED', completedAt = :completedAt, paymentStatus = 'PAID' WHERE orderId = :orderId AND status != 'COMPLETED'")
+    suspend fun markOrderCompleted(orderId: String, completedAt: Long = System.currentTimeMillis()): Int
+
+    @Query("UPDATE orders SET status = :cancelStatus WHERE orderId = :orderId AND status NOT IN ('COMPLETED', 'CUSTOMER_CANCELLED', 'VENDOR_CANCELLED')")
+    suspend fun atomicCancelOrder(orderId: String, cancelStatus: String = "CUSTOMER_CANCELLED"): Int
 }
 
 @Dao
@@ -132,6 +169,9 @@ interface VendorDao {
     @Query("UPDATE vendors SET currentCoach = :coachNumber WHERE vendorId = :vendorId")
     suspend fun updateVendorCoach(vendorId: String, coachNumber: String)
 
+    @Query("UPDATE vendors SET isOnline = :isOnline WHERE vendorId = :vendorId")
+    suspend fun updateVendorOnlineStatus(vendorId: String, isOnline: Boolean)
+
     @Query("UPDATE vendors SET todaySalesCount = todaySalesCount + 1, todayEarnings = todayEarnings + :amount, lastSaleTimestamp = :timestamp WHERE vendorId = :vendorId")
     suspend fun recordVendorSale(vendorId: String, amount: Double, timestamp: Long)
 }
@@ -155,6 +195,9 @@ interface ExpenseDao {
 interface SaleRecordDao {
     @Query("SELECT * FROM sale_records WHERE vendorId = :vendorId ORDER BY timestamp DESC")
     fun getSalesByVendor(vendorId: String): Flow<List<SaleRecordEntity>>
+
+    @Query("SELECT * FROM sale_records WHERE vendorId = :vendorId ORDER BY timestamp DESC")
+    suspend fun getSalesByVendorDirect(vendorId: String): List<SaleRecordEntity>
 
     @Query("SELECT SUM(amount) FROM sale_records WHERE vendorId = :vendorId")
     fun getTotalVendorSales(vendorId: String): Flow<Double?>

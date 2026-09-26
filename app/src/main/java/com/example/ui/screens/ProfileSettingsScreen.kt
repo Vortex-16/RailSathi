@@ -2,6 +2,7 @@ package com.example.ui.screens
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -37,6 +38,8 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -62,11 +65,19 @@ import com.example.data.model.JourneySession
 import com.example.data.model.UserRole
 import com.example.data.repository.TrainRouteDetails
 import com.example.ui.localization.LocalizationManager
+import com.example.ui.theme.ForestPillButton
+import com.example.ui.theme.MarigoldPillButton
+import com.example.ui.theme.OutlinedPillButton
+import com.example.ui.theme.SunlitStampedCard
 import com.example.ui.theme.CharcoalText
 import com.example.ui.theme.CharcoalTextMuted
+import com.example.ui.theme.ForestInk
 import com.example.ui.theme.GoldYellow
+import com.example.ui.theme.Marigold
 import com.example.ui.theme.NatureGreen
+import com.example.ui.theme.Parchment
 import com.example.ui.theme.RailNavy
+import com.example.ui.theme.SunlitCream
 import com.example.ui.theme.TerracottaAmber
 import com.example.ui.theme.WarmBorder
 import com.example.ui.theme.WarmSandBackground
@@ -108,11 +119,12 @@ fun ProfileSettingsScreen(
     if (showEditProfileDialog) {
         AlertDialog(
             onDismissRequest = { showEditProfileDialog = false },
+            containerColor = Parchment,
             title = {
                 Text(
                     text = "Edit Profile & Preferences",
-                    fontWeight = FontWeight.Bold,
-                    color = RailNavy
+                    fontWeight = FontWeight.ExtraBold,
+                    color = ForestInk
                 )
             },
             text = {
@@ -120,34 +132,58 @@ fun ProfileSettingsScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    androidx.compose.material3.OutlinedTextField(
+                    OutlinedTextField(
                         value = editName,
                         onValueChange = { editName = it },
                         label = { Text("Display Name") },
-                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_name")
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_name"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = ForestInk,
+                            unfocusedBorderColor = ForestInk.copy(alpha = 0.6f),
+                            focusedTextColor = ForestInk,
+                            unfocusedTextColor = ForestInk
+                        )
                     )
-                    androidx.compose.material3.OutlinedTextField(
+                    OutlinedTextField(
                         value = editPhone,
                         onValueChange = { editPhone = it },
                         label = { Text("Phone Number") },
-                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_phone")
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_phone"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = ForestInk,
+                            unfocusedBorderColor = ForestInk.copy(alpha = 0.6f),
+                            focusedTextColor = ForestInk,
+                            unfocusedTextColor = ForestInk
+                        )
                     )
-                    androidx.compose.material3.OutlinedTextField(
+                    OutlinedTextField(
                         value = editPreferredStation,
                         onValueChange = { editPreferredStation = it },
                         label = { Text("Preferred Station (e.g. SDAH, DDJ)") },
-                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_station")
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_station"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = ForestInk,
+                            unfocusedBorderColor = ForestInk.copy(alpha = 0.6f),
+                            focusedTextColor = ForestInk,
+                            unfocusedTextColor = ForestInk
+                        )
                     )
-                    androidx.compose.material3.OutlinedTextField(
+                    OutlinedTextField(
                         value = editRegularRoute,
                         onValueChange = { editRegularRoute = it },
                         label = { Text("Regular Commute Route") },
-                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_route")
+                        modifier = Modifier.fillMaxWidth().testTag("edit_profile_route"),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = ForestInk,
+                            unfocusedBorderColor = ForestInk.copy(alpha = 0.6f),
+                            focusedTextColor = ForestInk,
+                            unfocusedTextColor = ForestInk
+                        )
                     )
                 }
             },
             confirmButton = {
-                Button(
+                ForestPillButton(
                     onClick = {
                         onUpdateProfile(
                             editName,
@@ -160,16 +196,15 @@ fun ProfileSettingsScreen(
                         )
                         showEditProfileDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
+                    text = "Save Changes",
                     modifier = Modifier.testTag("save_profile_button")
-                ) {
-                    Text("Save Changes")
-                }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showEditProfileDialog = false }) {
-                    Text("Cancel")
-                }
+                OutlinedPillButton(
+                    onClick = { showEditProfileDialog = false },
+                    text = "Cancel"
+                )
             }
         )
     }
@@ -178,36 +213,36 @@ fun ProfileSettingsScreen(
     if (showLogoutConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutConfirmDialog = false },
+            containerColor = Parchment,
             title = {
                 Text(
                     text = "Logout & Clear App Data?",
-                    fontWeight = FontWeight.Bold,
-                    color = RailNavy
+                    fontWeight = FontWeight.ExtraBold,
+                    color = ForestInk
                 )
             },
             text = {
                 Text(
                     text = "This will clear your local sessions, saved routes, and cached data, returning you to the welcome onboarding screen.",
                     fontSize = 14.sp,
-                    color = CharcoalText
+                    color = ForestInk
                 )
             },
             confirmButton = {
-                Button(
+                ForestPillButton(
                     onClick = {
                         showLogoutConfirmDialog = false
                         onLogoutAndClearData()
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = androidx.compose.ui.graphics.Color(0xFFDC2626)),
+                    text = "Logout & Reset",
                     modifier = Modifier.testTag("confirm_logout_button")
-                ) {
-                    Text("Logout & Reset")
-                }
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showLogoutConfirmDialog = false }) {
-                    Text("Cancel")
-                }
+                OutlinedPillButton(
+                    onClick = { showLogoutConfirmDialog = false },
+                    text = "Cancel"
+                )
             }
         )
     }
@@ -216,67 +251,72 @@ fun ProfileSettingsScreen(
     if (showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
+            containerColor = Parchment,
             title = {
                 Text(
                     text = "Select Application Language",
-                    fontWeight = FontWeight.Bold,
-                    color = RailNavy
+                    fontWeight = FontWeight.ExtraBold,
+                    color = ForestInk
                 )
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     IndianLanguage.values().forEach { lang ->
                         val isSelected = selectedLanguageCandidate == lang
-                        Row(
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) Color(0xFFDBEAFE) else Color(0xFFF8FAFC))
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isSelected) Marigold else Parchment)
+                                .border(BorderStroke(1.5.dp, ForestInk), RoundedCornerShape(12.dp))
                                 .clickable { selectedLanguageCandidate = lang }
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
                         ) {
-                            Text(
-                                text = "${lang.nativeName} (${lang.englishName})",
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) RailNavy else CharcoalText,
-                                fontSize = 14.sp
-                            )
-                            if (isSelected) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Selected",
-                                    tint = RailNavy,
-                                    modifier = Modifier.size(18.dp)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = "${lang.nativeName} (${lang.englishName})",
+                                    fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                                    color = ForestInk,
+                                    fontSize = 14.sp
                                 )
+                                if (isSelected) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = ForestInk,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
                             }
                         }
                     }
                 }
             },
             confirmButton = {
-                Button(
+                ForestPillButton(
                     onClick = {
                         onLanguageChange(selectedLanguageCandidate)
                         showLanguageDialog = false
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = RailNavy)
-                ) {
-                    Text("Apply Language")
-                }
+                    text = "Apply Language"
+                )
             },
             dismissButton = {
-                TextButton(onClick = { showLanguageDialog = false }) {
-                    Text("Cancel")
-                }
+                OutlinedPillButton(
+                    onClick = { showLanguageDialog = false },
+                    text = "Cancel"
+                )
             }
         )
     }
 
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = WarmSandBackground
+        color = SunlitCream
     ) {
         LazyColumn(
             modifier = Modifier
@@ -288,11 +328,11 @@ fun ProfileSettingsScreen(
                 Spacer(modifier = Modifier.height(6.dp))
 
                 // Profile Header
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 5.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -304,13 +344,14 @@ fun ProfileSettingsScreen(
                             modifier = Modifier
                                 .size(56.dp)
                                 .clip(CircleShape)
-                                .background(RailNavy),
+                                .background(Marigold)
+                                .border(BorderStroke(2.dp, ForestInk), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = if (role == UserRole.VENDOR) Icons.Default.Storefront else Icons.Default.Person,
                                 contentDescription = "Profile",
-                                tint = TerracottaAmber,
+                                tint = ForestInk,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -321,13 +362,14 @@ fun ProfileSettingsScreen(
                             Text(
                                 text = user?.name ?: if (role == UserRole.VENDOR) "Subhash Da" else "Commuter Passenger",
                                 fontSize = if (isSeniorMode) 20.sp else 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = CharcoalText
+                                fontWeight = FontWeight.ExtraBold,
+                                color = ForestInk
                             )
                             Text(
                                 text = "Current Role: ${if (role == UserRole.VENDOR) "Train Vendor / Hawker" else "Daily Commuter"}",
                                 fontSize = 13.sp,
-                                color = CharcoalTextMuted
+                                fontWeight = FontWeight.Medium,
+                                color = ForestInk.copy(alpha = 0.8f)
                             )
                             Text(
                                 text = "Contact / ID: ${user?.phone ?: "9876543210"}",
@@ -336,24 +378,22 @@ fun ProfileSettingsScreen(
                             )
                         }
 
-                        androidx.compose.material3.OutlinedButton(
+                        OutlinedPillButton(
                             onClick = { showEditProfileDialog = true },
-                            shape = RoundedCornerShape(8.dp),
+                            text = "Edit",
                             modifier = Modifier.testTag("edit_profile_button")
-                        ) {
-                            Text("Edit", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        }
+                        )
                     }
                 }
             }
 
             // Real GPS / Cellular Tracker Status
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
@@ -365,15 +405,15 @@ fun ProfileSettingsScreen(
                                 Icon(
                                     imageVector = if (locationInfo?.isGpsActive == true) Icons.Default.GpsFixed else Icons.Default.GpsNotFixed,
                                     contentDescription = "GPS Status",
-                                    tint = if (locationInfo?.isGpsActive == true) NatureGreen else TerracottaAmber,
+                                    tint = ForestInk,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text(
                                     text = "Real-time Location & Station Radar",
                                     fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = RailNavy
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                             }
                         }
@@ -397,13 +437,14 @@ fun ProfileSettingsScreen(
                         Text(
                             text = stationStatusText,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = CharcoalText
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ForestInk
                         )
                         Text(
                             text = "Accurate Indian Railway EMU tracker with GPS coordinate matching and offline cell tower fallback.",
                             fontSize = 11.sp,
-                            color = CharcoalTextMuted
+                            fontWeight = FontWeight.Medium,
+                            color = ForestInk.copy(alpha = 0.75f)
                         )
                     }
                 }
@@ -411,11 +452,11 @@ fun ProfileSettingsScreen(
 
             // Language Selector Card with Modal Confirmation
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -428,7 +469,7 @@ fun ProfileSettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.Translate,
                                 contentDescription = "Language",
-                                tint = RailNavy,
+                                tint = ForestInk,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -436,38 +477,36 @@ fun ProfileSettingsScreen(
                                 Text(
                                     text = "App Language / भाषा / ভাষা",
                                     fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalText
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                                 Text(
                                     text = "Current: ${language.nativeName} (${language.englishName})",
                                     fontSize = 12.sp,
-                                    color = CharcoalTextMuted
+                                    fontWeight = FontWeight.Medium,
+                                    color = ForestInk.copy(alpha = 0.8f)
                                 )
                             }
                         }
 
-                        Button(
+                        ForestPillButton(
                             onClick = {
                                 selectedLanguageCandidate = language
                                 showLanguageDialog = true
                             },
-                            colors = ButtonDefaults.buttonColors(containerColor = RailNavy),
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text("Change", fontSize = 12.sp)
-                        }
+                            text = "Change"
+                        )
                     }
                 }
             }
 
             // Senior Citizen Accessibility Mode
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = if (isSeniorMode) Color(0xFFFEF3C7) else WarmSurface),
-                    border = BorderStroke(1.dp, if (isSeniorMode) GoldYellow else WarmBorder)
+                    containerColor = if (isSeniorMode) Marigold else Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -483,7 +522,7 @@ fun ProfileSettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.Elderly,
                                 contentDescription = "Senior Mode",
-                                tint = if (isSeniorMode) GoldYellow else CharcoalTextMuted,
+                                tint = ForestInk,
                                 modifier = Modifier.size(30.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -491,13 +530,14 @@ fun ProfileSettingsScreen(
                                 Text(
                                     text = LocalizationManager.getString("senior_mode", language),
                                     fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalText
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                                 Text(
                                     text = "Large high-contrast fonts, clear targets, sugar/spice indicators",
                                     fontSize = 12.sp,
-                                    color = CharcoalTextMuted
+                                    fontWeight = FontWeight.Medium,
+                                    color = ForestInk.copy(alpha = 0.8f)
                                 )
                             }
                         }
@@ -506,8 +546,10 @@ fun ProfileSettingsScreen(
                             checked = isSeniorMode,
                             onCheckedChange = { onToggleSeniorMode(it) },
                             colors = SwitchDefaults.colors(
-                                checkedThumbColor = Color.White,
-                                checkedTrackColor = GoldYellow
+                                checkedThumbColor = ForestInk,
+                                checkedTrackColor = SunlitCream,
+                                uncheckedThumbColor = CharcoalTextMuted,
+                                uncheckedTrackColor = Parchment
                             ),
                             modifier = Modifier.testTag("profile_senior_switch")
                         )
@@ -517,18 +559,18 @@ fun ProfileSettingsScreen(
 
             // Train Route Timetable Info
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
                             text = "Train Route & Timetable",
                             fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = CharcoalText
+                            fontWeight = FontWeight.ExtraBold,
+                            color = ForestInk
                         )
                         Spacer(modifier = Modifier.height(8.dp))
 
@@ -536,8 +578,9 @@ fun ProfileSettingsScreen(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFFF1F5F9))
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(SunlitCream)
+                                    .border(BorderStroke(1.5.dp, ForestInk), RoundedCornerShape(12.dp))
                                     .clickable { showRouteMenu = true }
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
@@ -547,16 +590,16 @@ fun ProfileSettingsScreen(
                                     Icon(
                                         imageVector = Icons.Default.DirectionsTransit,
                                         contentDescription = "Train",
-                                        tint = RailNavy,
+                                        tint = ForestInk,
                                         modifier = Modifier.size(20.dp)
                                     )
                                     Spacer(modifier = Modifier.width(10.dp))
                                     Column {
                                         Text(
                                             text = selectedRoute?.trainName ?: (journeySession?.trainName ?: "Select Timetable Schedule"),
-                                            fontWeight = FontWeight.Bold,
+                                            fontWeight = FontWeight.ExtraBold,
                                             fontSize = 14.sp,
-                                            color = CharcoalText
+                                            color = ForestInk
                                         )
                                         Text(
                                             text = if (selectedRoute != null) {
@@ -565,16 +608,17 @@ fun ProfileSettingsScreen(
                                                 "Browse suburban train schedules"
                                             },
                                             fontSize = 12.sp,
-                                            color = CharcoalTextMuted
+                                            fontWeight = FontWeight.Medium,
+                                            color = ForestInk.copy(alpha = 0.7f)
                                         )
                                     }
                                 }
 
                                 Text(
                                     text = "Browse",
-                                    color = RailNavy,
+                                    color = ForestInk,
                                     fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.ExtraBold
                                 )
                             }
 
@@ -608,15 +652,15 @@ fun ProfileSettingsScreen(
 
             // Location & Train Diagnostics Card
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .clickable { onOpenDiagnostics() }
                         .testTag("profile_diagnostics_card"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -632,7 +676,7 @@ fun ProfileSettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.GpsFixed,
                                 contentDescription = "Diagnostics",
-                                tint = RailNavy,
+                                tint = ForestInk,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -640,22 +684,23 @@ fun ProfileSettingsScreen(
                                 Text(
                                     text = "Location & Station Diagnostics",
                                     fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalText
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                                 Text(
                                     text = "Live GPS accuracy, station geofence, filtered departed trains",
                                     fontSize = 12.sp,
-                                    color = CharcoalTextMuted
+                                    fontWeight = FontWeight.Medium,
+                                    color = ForestInk.copy(alpha = 0.75f)
                                 )
                             }
                         }
 
                         Text(
                             text = "Inspect ➔",
-                            color = RailNavy,
+                            color = ForestInk,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
                 }
@@ -663,15 +708,15 @@ fun ProfileSettingsScreen(
 
             // Help & Tutorial Replay
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .clickable { onReplayTutorial() }
                         .testTag("profile_how_it_works_card"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -687,7 +732,7 @@ fun ProfileSettingsScreen(
                             Icon(
                                 imageVector = Icons.Default.HelpOutline,
                                 contentDescription = "Help",
-                                tint = RailNavy,
+                                tint = ForestInk,
                                 modifier = Modifier.size(24.dp)
                             )
                             Spacer(modifier = Modifier.width(12.dp))
@@ -695,22 +740,23 @@ fun ProfileSettingsScreen(
                                 Text(
                                     text = "How RailSathi works",
                                     fontSize = if (isSeniorMode) 17.sp else 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = CharcoalText
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
                                 )
                                 Text(
                                     text = "View 2-screen guide and quick instructions",
                                     fontSize = 12.sp,
-                                    color = CharcoalTextMuted
+                                    fontWeight = FontWeight.Medium,
+                                    color = ForestInk.copy(alpha = 0.75f)
                                 )
                             }
                         }
 
                         Text(
                             text = "View ➔",
-                            color = RailNavy,
+                            color = ForestInk,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
                 }
@@ -718,26 +764,26 @@ fun ProfileSettingsScreen(
 
             // Railway Rules & Safety Policy
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = WarmSurface),
-                    border = BorderStroke(1.dp, WarmBorder)
+                    containerColor = Parchment,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Default.Shield,
                                 contentDescription = "Safety",
-                                tint = NatureGreen,
+                                tint = ForestInk,
                                 modifier = Modifier.size(20.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Suburban Railway Rules & Ethics",
                                 fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = CharcoalText
+                                fontWeight = FontWeight.ExtraBold,
+                                color = ForestInk
                             )
                         }
 
@@ -748,7 +794,8 @@ fun ProfileSettingsScreen(
                                     "• Hawker collision guard prevents market saturation and ensures fair daily earnings for all local train vendors.\n" +
                                     "• Transparent prices with zero surge charges and verified QR payments.",
                             fontSize = 12.sp,
-                            color = CharcoalTextMuted,
+                            fontWeight = FontWeight.Medium,
+                            color = ForestInk.copy(alpha = 0.8f),
                             lineHeight = 18.sp
                         )
                     }
@@ -757,15 +804,15 @@ fun ProfileSettingsScreen(
 
             // Logout & Clear Data Action Card
             item {
-                Card(
+                SunlitStampedCard(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .clickable { showLogoutConfirmDialog = true }
                         .testTag("logout_card"),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFEF2F2)),
-                    border = BorderStroke(1.dp, Color(0xFFFCA5A5))
+                    containerColor = Marigold,
+                    borderColor = ForestInk,
+                    shadowOffset = 4.dp
                 ) {
                     Row(
                         modifier = Modifier
@@ -778,21 +825,22 @@ fun ProfileSettingsScreen(
                             Text(
                                 text = "Logout & Reset App Data",
                                 fontSize = if (isSeniorMode) 16.sp else 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFDC2626)
+                                fontWeight = FontWeight.ExtraBold,
+                                color = ForestInk
                             )
                             Text(
                                 text = "Clear session tokens, database cache, and restart onboarding",
                                 fontSize = 11.sp,
-                                color = CharcoalTextMuted
+                                fontWeight = FontWeight.Medium,
+                                color = ForestInk.copy(alpha = 0.8f)
                             )
                         }
 
                         Text(
                             text = "Reset ➔",
-                            color = Color(0xFFDC2626),
+                            color = ForestInk,
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.ExtraBold
                         )
                     }
                 }
@@ -808,16 +856,17 @@ fun ProfileSettingsScreen(
                     Text(
                         text = "RailSathi v1.0.0.2",
                         fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = CharcoalTextMuted
+                        fontWeight = FontWeight.ExtraBold,
+                        color = ForestInk
                     )
                     Text(
                         text = "Real-time Indian Railways Suburban Network",
                         fontSize = 11.sp,
-                        color = CharcoalTextMuted.copy(alpha = 0.8f)
+                        fontWeight = FontWeight.Medium,
+                        color = ForestInk.copy(alpha = 0.7f)
                     )
                 }
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(96.dp))
             }
         }
     }

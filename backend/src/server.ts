@@ -16,6 +16,11 @@ import orderCompleteHandler from '../api/orders/[id]/complete';
 import profileHandler from '../api/profile/index';
 import requestsHandler from '../api/requests/index';
 import requestAcceptHandler from '../api/requests/[id]/accept';
+import requestRejectHandler from '../api/requests/[id]/reject';
+import requestCancelHandler from '../api/requests/[id]/cancel';
+import requestCoachHandler from '../api/requests/[id]/coach';
+import vendorAvailabilityHandler from '../api/vendors/availability';
+import vendorCoachHandler from '../api/vendors/coach';
 import sessionHandler from '../api/session/index';
 import stationSearchHandler from '../api/stations/search';
 import stationLiveHandler from '../api/stations/[code]/live';
@@ -157,7 +162,15 @@ const server = http.createServer(async (req, res) => {
       return await trainCoachesHandler(enhancedReq, enhancedRes);
     }
 
-    // 10. Requests routes: /api/requests and /api/requests/:id/accept
+    // 10. Vendor operational routes
+    if (pathname === '/api/vendors/availability') {
+      return await vendorAvailabilityHandler(enhancedReq, enhancedRes);
+    }
+    if (pathname === '/api/vendors/coach') {
+      return await vendorCoachHandler(enhancedReq, enhancedRes);
+    }
+
+    // 11. Requests routes: /api/requests, /accept, /reject, /cancel, /coach
     if (pathname === '/api/requests') {
       return await requestsHandler(enhancedReq, enhancedRes);
     }
@@ -166,6 +179,24 @@ const server = http.createServer(async (req, res) => {
     if (requestAcceptMatch) {
       enhancedReq.query.id = requestAcceptMatch[1];
       return await requestAcceptHandler(enhancedReq, enhancedRes);
+    }
+
+    const requestRejectMatch = pathname.match(/^\/api\/requests\/([a-zA-Z0-9_-]+)\/reject\/?$/);
+    if (requestRejectMatch) {
+      enhancedReq.query.id = requestRejectMatch[1];
+      return await requestRejectHandler(enhancedReq, enhancedRes);
+    }
+
+    const requestCancelMatch = pathname.match(/^\/api\/requests\/([a-zA-Z0-9_-]+)\/cancel\/?$/);
+    if (requestCancelMatch) {
+      enhancedReq.query.id = requestCancelMatch[1];
+      return await requestCancelHandler(enhancedReq, enhancedRes);
+    }
+
+    const requestCoachMatch = pathname.match(/^\/api\/requests\/([a-zA-Z0-9_-]+)\/coach\/?$/);
+    if (requestCoachMatch) {
+      enhancedReq.query.id = requestCoachMatch[1];
+      return await requestCoachHandler(enhancedReq, enhancedRes);
     }
 
     // 11. Orders dynamic routes: /api/orders/:id/price, /api/orders/:id/confirm, /api/orders/:id/complete

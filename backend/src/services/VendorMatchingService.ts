@@ -53,8 +53,19 @@ export class VendorMatchingService {
       return { success: false, message: 'Request not found or expired' };
     }
 
+    // Lock atomically or allow idempotent same-vendor retry
+    if (req.matched_vendor_id === vendorId && req.status === 'VENDOR_ACCEPTED') {
+      return { success: true, message: 'Request already claimed by this vendor (Idempotent)', request: req };
+    }
+
     if (req.status !== 'REQUESTED' && req.status !== 'MATCHING' && req.status !== 'OFFERED_TO_VENDOR') {
       return { success: false, message: 'Request already claimed by another vendor.' };
+    }
+
+    // Verify vendor is marked as Available on server
+    const vendorRecord = memoryStore.vendors.get(vendorId);
+    if (vendorRecord && vendorRecord.isAvailable === false) {
+      return { success: false, message: 'Vendor is currently marked as Not Available. Set status to Available before accepting orders.' };
     }
 
     // Lock atomically
