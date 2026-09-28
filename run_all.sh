@@ -55,11 +55,28 @@ fi
 echo -e "\n${YELLOW}[2/3] Compiling Android APK with Gradle...${NC}"
 cd "$PROJECT_ROOT"
 
-# Ensure gradlew is executable
-chmod +x gradlew
+# Ensure Gradle runner is available (gradlew or system gradle)
+if [ -f "$PROJECT_ROOT/gradlew" ]; then
+    chmod +x "$PROJECT_ROOT/gradlew"
+    GRADLE_CMD="./gradlew"
+elif command -v gradle >/dev/null 2>&1; then
+    echo -e "Generating gradlew wrapper using installed gradle..."
+    gradle wrapper || true
+    if [ -f "$PROJECT_ROOT/gradlew" ]; then
+        chmod +x "$PROJECT_ROOT/gradlew"
+        GRADLE_CMD="./gradlew"
+    else
+        GRADLE_CMD="gradle"
+    fi
+else
+    echo -e "${RED}❌ Neither gradlew nor gradle binary was found.${NC}"
+    exit 1
+fi
+
+echo -e "Using Gradle command: ${GREEN}$GRADLE_CMD${NC}"
 
 # Build debug APK with memory optimization suitable for Cloud Shell / VM
-./gradlew :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx1536m -XX:+UseParallelGC"
+$GRADLE_CMD :app:assembleDebug --no-daemon -Dorg.gradle.jvmargs="-Xmx1536m -XX:+UseParallelGC"
 
 # ----------------------------------------------------
 # Step 3: Create Shortcut to APK & Display Instructions
