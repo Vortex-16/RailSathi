@@ -14,7 +14,7 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.railsathi.app"
+    applicationId = "com.aistudio.railsathi.k9m4pq"
     minSdk = 24
     targetSdk = 36
     versionCode = 10002
