@@ -159,6 +159,9 @@ fun TravelerHomeScreen(
     userName: String = "Kailash Kumar",
     allStations: List<RailwayStation> = emptyList(),
     onSelectStationCode: (String) -> Unit = {},
+    betweenTrains: List<TrainCandidate> = emptyList(),
+    isLoadingBetweenTrains: Boolean = false,
+    onFetchTrainsBetween: (String, String) -> Unit = { _, _ -> },
     onNavigateToTab: (AppNavTab) -> Unit = {}
 ) {
     var seatLocationText by remember { mutableStateOf("") }
@@ -459,6 +462,126 @@ fun TravelerHomeScreen(
                                 text = "Start",
                                 modifier = Modifier.testTag("start_daily_commute_btn")
                             )
+                        }
+                    }
+                }
+
+                // Live Train Timetable Between Stations (e.g. Howrah to Hind Motor)
+                item {
+                    var fromStationInput by remember { mutableStateOf(nearbyStation?.code ?: "HWH") }
+                    var toStationInput by remember { mutableStateOf("HMZ") }
+
+                    SunlitStampedCard(
+                        modifier = Modifier.fillMaxWidth().testTag("route_schedule_finder_card"),
+                        containerColor = Parchment,
+                        borderColor = ForestInk,
+                        shadowOffset = 5.dp
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "🚆 Trains Between Stations",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = ForestInk
+                                )
+                                Text(
+                                    text = "etrain.info sync",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = VividFern
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Fetch live suburban timetable (e.g. Howrah to Hind Motor) dynamically without hardcoded stations.",
+                                fontSize = 11.sp,
+                                color = CharcoalTextMuted
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = fromStationInput,
+                                    onValueChange = { fromStationInput = it.uppercase() },
+                                    label = { Text("From (e.g. HWH)") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f).testTag("from_station_input"),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                OutlinedTextField(
+                                    value = toStationInput,
+                                    onValueChange = { toStationInput = it.uppercase() },
+                                    label = { Text("To (e.g. HMZ)") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f).testTag("to_station_input"),
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            ForestPillButton(
+                                onClick = { onFetchTrainsBetween(fromStationInput.trim(), toStationInput.trim()) },
+                                text = if (isLoadingBetweenTrains) "Fetching Live Schedule..." else "Find Trains (${fromStationInput} ➔ ${toStationInput})",
+                                modifier = Modifier.fillMaxWidth().testTag("search_between_trains_btn")
+                            )
+
+                            if (betweenTrains.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Text(
+                                    text = "Available Trains (${betweenTrains.size} found):",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = ForestInk
+                                )
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    betweenTrains.take(10).forEach { train ->
+                                        Surface(
+                                            modifier = Modifier.fillMaxWidth().clickable {
+                                                onSelectCandidate(train)
+                                            },
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = SunlitCream,
+                                            border = BorderStroke(1.dp, WarmBorder)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(12.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = "${train.trainName} (${train.trainNumber})",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = ForestInk
+                                                    )
+                                                    Text(
+                                                        text = "Dep: ${train.departureTime} • ${train.platform} • ${train.originStationCode} ➔ ${train.destStationCode}",
+                                                        fontSize = 11.sp,
+                                                        color = CharcoalTextMuted
+                                                    )
+                                                }
+                                                ForestPillButton(
+                                                    onClick = { onSelectCandidate(train) },
+                                                    text = "Select",
+                                                    modifier = Modifier.testTag("select_train_${train.trainNumber}")
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }

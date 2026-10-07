@@ -12,7 +12,9 @@ echo -e "${BLUE}====================================================${NC}"
 echo -e "${BLUE}        RailSathi All-in-One Runner Script         ${NC}"
 echo -e "${BLUE}====================================================${NC}"
 
-PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Resolve script directory in a POSIX-compliant way compatible with sh, dash, and bash
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
 cd "$PROJECT_ROOT"
 
 # ----------------------------------------------------

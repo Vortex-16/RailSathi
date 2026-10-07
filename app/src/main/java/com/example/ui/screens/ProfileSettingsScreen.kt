@@ -112,8 +112,14 @@ fun ProfileSettingsScreen(
     var editName by remember(user) { mutableStateOf(user?.name ?: "") }
     var editPhone by remember(user) { mutableStateOf(user?.phone ?: "") }
     var editBio by remember(user) { mutableStateOf("") }
-    var editPreferredStation by remember(user) { mutableStateOf("SDAH") }
-    var editRegularRoute by remember(user) { mutableStateOf("Sealdah - Ranaghat Local") }
+    val detectedStationCode = locationInfo?.nearestStation?.code ?: "HWH"
+    val detectedStationName = locationInfo?.nearestStation?.nameEn ?: "Howrah Jn"
+    var editPreferredStation by remember(user, locationInfo) {
+        mutableStateOf(locationInfo?.nearestStation?.code ?: "HWH")
+    }
+    var editRegularRoute by remember(user, locationInfo) {
+        mutableStateOf(user?.defaultTrain ?: "Suburban Local ($detectedStationName)")
+    }
 
     // Edit Profile Modal Dialog
     if (showEditProfileDialog) {

@@ -59,6 +59,8 @@ data class RemoteTrainDto(
     @Json(name = "destStationCode") val destStationCode: String,
     @Json(name = "destStationName") val destStationName: String,
     @Json(name = "departureTime") val departureTime: String = "",
+    @Json(name = "arrivalTime") val arrivalTime: String = "",
+    @Json(name = "travelTime") val travelTime: String = "",
     @Json(name = "platform") val platform: String = "",
     @Json(name = "type") val type: String = "EMU Local"
 )

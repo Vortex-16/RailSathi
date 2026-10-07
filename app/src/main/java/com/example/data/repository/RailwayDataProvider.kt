@@ -39,6 +39,7 @@ interface RailwayDataProvider {
     suspend fun getAllRoutes(): List<TrainRouteDetails>
     suspend fun getDynamicCoaches(trainNumber: String): List<String>
     suspend fun getLiveTrainStatus(trainNumber: String, currentStationCode: String?): LiveTrainStatus
+    suspend fun getTrainsBetweenStations(fromCode: String, toCode: String): List<TrainCandidate>
     suspend fun searchStationsAndTrains(query: String): Pair<List<RailwayStation>, List<TrainCandidate>>
     fun getRecentApiLogs(): List<ApiDiagnosticsLog>
 }
@@ -363,6 +364,64 @@ class HybridRailwayDataProvider(
         return localList
     }
 
+    override suspend fun getTrainsBetweenStations(fromCode: String, toCode: String): List<TrainCandidate> = withContext(Dispatchers.IO) {
+        val now = System.currentTimeMillis()
+        try {
+            val res = ApiClient.apiService.getTrainsBetweenStations(fromCode, toCode)
+            logApiMetadata(
+                endpoint = "/api/trains/between",
+                status = res.code(),
+                traceId = res.body()?.meta?.traceId,
+                timestamp = res.body()?.meta?.timestamp,
+                execTime = null
+            )
+            if (res.isSuccessful && res.body()?.success == true) {
+                val remoteList = res.body()?.data
+                if (!remoteList.isNullOrEmpty()) {
+                    val defaultCoaches = listOf("CAB-1", "LD-1", "VND-1", "GS-1", "GS-2", "GS-3", "VND-2", "LD-2", "CAB-2")
+                    val list = remoteList.map { dto ->
+                        TrainCandidate(
+                            trainNumber = dto.trainNumber,
+                            trainName = dto.trainName,
+                            originStationCode = dto.originStationCode.ifEmpty { fromCode },
+                            originStationName = dto.originStationName.ifEmpty { fromCode },
+                            destStationCode = dto.destStationCode.ifEmpty { toCode },
+                            destStationName = dto.destStationName.ifEmpty { toCode },
+                            departureTime = dto.departureTime,
+                            arrivalTime = dto.departureTime,
+                            platform = dto.platform.ifEmpty { "PF 1" },
+                            zone = "ER",
+                            coachCodes = defaultCoaches
+                        )
+                    }
+                    try {
+                        val entities = list.map { candidate ->
+                            TrainEntity(
+                                trainNumber = candidate.trainNumber,
+                                trainName = candidate.trainName,
+                                originStationCode = candidate.originStationCode,
+                                originStationName = candidate.originStationName,
+                                destStationCode = candidate.destStationCode,
+                                destStationName = candidate.destStationName,
+                                departureTime = candidate.departureTime,
+                                arrivalTime = candidate.arrivalTime,
+                                platform = candidate.platform,
+                                type = "EMU Local",
+                                zone = candidate.zone,
+                                coachCodes = candidate.coachCodes.joinToString(","),
+                                lastUpdated = now
+                            )
+                        }
+                        db?.trainDao()?.insertTrains(entities)
+                    } catch (_: Exception) {}
+                    return@withContext list
+                }
+            }
+        } catch (_: Exception) {}
+
+        return@withContext localFallback.getTrainsBetweenStations(fromCode, toCode)
+    }
+
     override suspend fun getTrainSchedule(trainNumber: String): LocalTrainSchedule? {
         return localFallback.getTrainSchedule(trainNumber)
     }
@@ -576,6 +635,33 @@ class LocalStaticRailwayDataProvider : RailwayDataProvider {
             candidates = projectedCandidates,
             referenceIstEpochMs = System.currentTimeMillis()
         )
+    }
+
+    override suspend fun getTrainsBetweenStations(fromCode: String, toCode: String): List<TrainCandidate> {
+        val matchingSchedules = IndianLocalRailwayDatabase.allSchedules.filter { sched ->
+            val fromIndex = sched.stops.indexOfFirst { it.stationCode.equals(fromCode, ignoreCase = true) }
+            val toIndex = sched.stops.indexOfFirst { it.stationCode.equals(toCode, ignoreCase = true) }
+            fromIndex != -1 && toIndex != -1 && fromIndex < toIndex
+        }
+        if (matchingSchedules.isNotEmpty()) {
+            return matchingSchedules.map { sched ->
+                val fromStop = sched.stops.find { it.stationCode.equals(fromCode, ignoreCase = true) }
+                TrainCandidate(
+                    trainNumber = sched.trainNumber,
+                    trainName = sched.trainName,
+                    originStationCode = sched.originStationCode,
+                    originStationName = IndianLocalRailwayDatabase.allStations.find { it.code == sched.originStationCode }?.nameEn ?: sched.originStationCode,
+                    destStationCode = sched.destStationCode,
+                    destStationName = IndianLocalRailwayDatabase.allStations.find { it.code == sched.destStationCode }?.nameEn ?: sched.destStationCode,
+                    departureTime = fromStop?.departureTime ?: "08:30",
+                    arrivalTime = fromStop?.arrivalTime ?: "08:30",
+                    platform = fromStop?.platform ?: "PF 1",
+                    zone = sched.zone,
+                    coachCodes = sched.coaches.map { it.coachCode }
+                )
+            }
+        }
+        return getStationDepartures(fromCode)
     }
 
     override suspend fun getTrainSchedule(trainNumber: String): LocalTrainSchedule? {

@@ -31,6 +31,12 @@ interface ApiService {
         @Path("code") stationCode: String
     ): Response<ApiEnvelope<List<RemoteTrainDto>>>
 
+    @GET("api/trains/between")
+    suspend fun getTrainsBetweenStations(
+        @Query("from") fromCode: String,
+        @Query("to") toCode: String
+    ): Response<ApiEnvelope<List<RemoteTrainDto>>>
+
     @GET("api/stations/{code}/live")
     suspend fun getStationLiveBoard(
         @Path("code") stationCode: String

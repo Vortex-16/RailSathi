@@ -114,6 +114,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     // Regular Commute Info
     val regularCommute = MutableStateFlow(RegularCommuteSchedule())
 
+    // Train Between Stations (Dynamic Timetable like etrain.info HWH to HMZ)
+    private val _betweenTrains = MutableStateFlow<List<TrainCandidate>>(emptyList())
+    val betweenTrains: StateFlow<List<TrainCandidate>> = _betweenTrains.asStateFlow()
+
+    private val _isLoadingBetweenTrains = MutableStateFlow(false)
+    val isLoadingBetweenTrains: StateFlow<Boolean> = _isLoadingBetweenTrains.asStateFlow()
+
     // Search state
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -311,6 +318,32 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val active = activeJourneySession.value
         if (active != null) {
             trainContextEngine.updateJourneyCoach(coach)
+        }
+    }
+
+    fun fetchTrainsBetween(fromCode: String, toCode: String) {
+        viewModelScope.launch {
+            _isLoadingBetweenTrains.value = true
+            try {
+                val list = railwayDataProvider.getTrainsBetweenStations(fromCode, toCode)
+                _betweenTrains.value = list
+                if (list.isNotEmpty()) {
+                    val first = list.first()
+                    regularCommute.value = RegularCommuteSchedule(
+                        originStationCode = first.originStationCode,
+                        originStationName = first.originStationName,
+                        destStationCode = first.destStationCode,
+                        destStationName = first.destStationName,
+                        usualTrainNumber = first.trainNumber,
+                        usualTrainName = first.trainName,
+                        usualDepartureTime = first.departureTime,
+                        usualCoach = _selectedCoach.value
+                    )
+                }
+            } catch (_: Exception) {
+            } finally {
+                _isLoadingBetweenTrains.value = false
+            }
         }
     }
 
@@ -545,7 +578,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     role = savedRole.name,
                     languageCode = prefs.getSavedLanguage().code,
                     isSeniorMode = prefs.getSavedSeniorMode(),
-                    defaultTrain = "31821 Sealdah - Ranaghat Local",
+                    defaultTrain = nearbyStation.value?.let { "Suburban Local (${it.nameEn})" } ?: "Suburban Commuter Local",
                     defaultCoach = "C-4"
                 )
                 repository.saveUser(user)
@@ -604,7 +637,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 role = role.name,
                 languageCode = language.code,
                 isSeniorMode = prefs.getSavedSeniorMode(),
-                defaultTrain = "31821 Sealdah - Ranaghat Local",
+                defaultTrain = nearbyStation.value?.let { "Suburban Local (${it.nameEn})" } ?: "Suburban Commuter Local",
                 defaultCoach = if (role == UserRole.VENDOR) "VND-1" else "GS-2"
             )
             repository.saveUser(user)
@@ -685,7 +718,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 role = currentUser?.role ?: currentRole.value.name,
                 languageCode = language.code,
                 isSeniorMode = isSenior,
-                defaultTrain = currentUser?.defaultTrain ?: "31821 Sealdah - Ranaghat Local",
+                defaultTrain = currentUser?.defaultTrain ?: (nearbyStation.value?.let { "Suburban Local (${it.nameEn})" } ?: "Suburban Commuter Local"),
                 defaultCoach = currentUser?.defaultCoach ?: "GS-2"
             )
             repository.saveUser(updatedUser)
@@ -797,11 +830,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             val effectiveTrainNumber = session?.trainNumber
                 ?: selectedCandidate.value?.trainNumber
                 ?: stationCandidates.value.firstOrNull()?.trainNumber
-                ?: "31821"
+                ?: _betweenTrains.value.firstOrNull()?.trainNumber
+                ?: (nearbyStation.value?.let { "${it.code}01" } ?: "37309")
             val effectiveTrainName = session?.trainName
                 ?: selectedCandidate.value?.trainName
                 ?: stationCandidates.value.firstOrNull()?.trainName
-                ?: "Sealdah - Ranaghat Local"
+                ?: _betweenTrains.value.firstOrNull()?.trainName
+                ?: (nearbyStation.value?.let { "Local from ${it.nameEn}" } ?: "Suburban Local")
 
             val coach = _selectedCoach.value
             val userName = activeUser.value?.name ?: "Traveler"

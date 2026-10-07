@@ -101,6 +101,8 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
     val locationManagerState by viewModel.locationManagerState.collectAsState()
     val userTravelStatus by viewModel.userTravelStatus.collectAsState()
     val availableCoaches by viewModel.availableCoaches.collectAsState()
+    val betweenTrains by viewModel.betweenTrains.collectAsState()
+    val isLoadingBetweenTrains by viewModel.isLoadingBetweenTrains.collectAsState()
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
@@ -318,6 +320,9 @@ fun RailSathiApp(viewModel: MainViewModel = viewModel()) {
                                 userName = activeVendor?.name ?: "Kailash Kumar",
                                 allStations = allApiStations,
                                 onSelectStationCode = { viewModel.selectStationByCode(it) },
+                                betweenTrains = betweenTrains,
+                                isLoadingBetweenTrains = isLoadingBetweenTrains,
+                                onFetchTrainsBetween = { from, to -> viewModel.fetchTrainsBetween(from, to) },
                                 onNavigateToTab = { viewModel.setNavTab(it) }
                             )
                         }

@@ -27,6 +27,7 @@ import stationLiveHandler from '../api/stations/[code]/live';
 import stationTrainsHandler from '../api/stations/[code]/trains';
 import syncHandler from '../api/sync/index';
 import trainsLocalHandler from '../api/trains/local';
+import trainsBetweenHandler from '../api/trains/between';
 import trainLiveHandler from '../api/trains/[number]/live';
 import trainCoachesHandler from '../api/trains/[number]/coaches';
 
@@ -145,7 +146,18 @@ const server = http.createServer(async (req, res) => {
       return await stationTrainsHandler(enhancedReq, enhancedRes);
     }
 
-    // 9. Trains routes: /api/trains/local, /api/trains/:number/live, /api/trains/:number/coaches
+    // 9. Trains routes: /api/trains/between, /api/trains/local, /api/trains/:number/live, /api/trains/:number/coaches
+    if (pathname === '/api/trains/between') {
+      return await trainsBetweenHandler(enhancedReq, enhancedRes);
+    }
+
+    const trainsBetweenMatch = pathname.match(/^\/api\/trains\/between\/([a-zA-Z0-9]+)\/([a-zA-Z0-9]+)\/?$/);
+    if (trainsBetweenMatch) {
+      enhancedReq.query.from = trainsBetweenMatch[1];
+      enhancedReq.query.to = trainsBetweenMatch[2];
+      return await trainsBetweenHandler(enhancedReq, enhancedRes);
+    }
+
     if (pathname === '/api/trains/local') {
       return await trainsLocalHandler(enhancedReq, enhancedRes);
     }
