@@ -26,7 +26,7 @@ class GoogleAuthManager(private val context: Context) {
     private val credentialManager = CredentialManager.create(context)
 
     // Optional web client ID (can be overridden or read from BuildConfig/Resources)
-    var webClientId: String = "100234567890-railsaathi.apps.googleusercontent.com"
+    var webClientId: String = "39959879941-d03t8rgipl0hd39kiksv64s1shim7j0k.apps.googleusercontent.com"
 
     suspend fun signInWithGoogle(activityContext: Context): GoogleSignInResult {
         return try {

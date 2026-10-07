@@ -35,7 +35,7 @@ class AuthManager(private val context: Context) {
     private val credentialManager = CredentialManager.create(context)
 
     // IMPORTANT: serverClientId MUST be the Web Application Client ID (not Android Client ID)
-    var serverClientId: String = "39959879941-mjqtkvv24giqml1dt0hhpdua5ec9sqpt.apps.googleusercontent.com"
+    var serverClientId: String = "39959879941-d03t8rgipl0hd39kiksv64s1shim7j0k.apps.googleusercontent.com"
 
     private fun findActivity(ctx: Context): Activity? {
         var currentContext: Context? = ctx
